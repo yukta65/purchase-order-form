@@ -4,19 +4,26 @@ import TalentRow from "./TalentRow";
 function ReqSection({ section, index, client, poType, onUpdate, onRemove }) {
   const [local, setLocal] = useState(section);
 
+  // Sync when section changes
   useEffect(() => {
     setLocal(section);
   }, [section]);
 
+  // FIX: update parent ONLY when certain keys change
   useEffect(() => {
-    onUpdate(local);
-  }, [local]);
+    onUpdate({
+      reqId: local.reqId,
+      reqTitle: local.reqTitle,
+      talents: local.talents,
+    });
+  }, [local.reqId, local.reqTitle, local.talents]);
 
-  const reqOptions = client && client.reqs ? client.reqs : [];
+  const reqOptions = client?.reqs || [];
 
   function handleReqChange(e) {
     const { value } = e.target;
     const found = reqOptions.find((r) => r.id === value);
+
     if (found) {
       setLocal((prev) => ({
         ...prev,
@@ -87,22 +94,22 @@ function ReqSection({ section, index, client, poType, onUpdate, onRemove }) {
 
       <div className="mt-3">
         <h6>Talents</h6>
-        {local.talents && local.talents.length === 0 && (
+        {local.talents?.length === 0 && (
           <div className="text-muted small">
             No talents available for this REQ.
           </div>
         )}
-        {local.talents &&
-          local.talents.map((t) => (
-            <TalentRow
-              key={t.id}
-              talent={t}
-              selected={t.selected}
-              onToggle={(sel) => toggleTalent(t.id, sel)}
-              onChange={(upd) => updateTalent(t.id, upd)}
-              poType={poType}
-            />
-          ))}
+
+        {local.talents?.map((t) => (
+          <TalentRow
+            key={t.id}
+            talent={t}
+            selected={t.selected}
+            onToggle={(sel) => toggleTalent(t.id, sel)}
+            onChange={(upd) => updateTalent(t.id, upd)}
+            poType={poType}
+          />
+        ))}
       </div>
     </div>
   );
