@@ -1,0 +1,70 @@
+[
+  {
+    "id": 1,
+    "name": "Google",
+    "reqs": [
+      {
+        "id": "REQ-G-101",
+        "title": "Frontend Developer",
+        "stage": "Interview",
+        "talents": [
+          {
+            "id": 1,
+            "name": "John Doe",
+            "email": "john.doe@example.com"
+          },
+          {
+            "id": 2,
+            "name": "Aman Singh",
+            "email": "aman.singh@example.com"
+          },
+          {
+            "id": 3,
+            "name": "Neha Sharma",
+            "email": "neha.sharma@example.com"
+          }
+        ]
+      },
+      {
+        "id": "REQ-G-102",
+        "title": "UI/UX Designer",
+        "stage": "Shortlist",
+        "talents": [
+          {
+            "id": 4,
+            "name": "Priya Verma",
+            "email": "priya.verma@example.com"
+          },
+          {
+            "id": 5,
+            "name": "Rohit Kumar",
+            "email": "rohit.kumar@example.com"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Microsoft",
+    "reqs": [
+      {
+        "id": "REQ-M-201",
+        "title": "Backend Developer",
+        "stage": "Technical",
+        "talents": [
+          {
+            "id": 6,
+            "name": "Riya Patel",
+            "email": "riya.patel@example.com"
+          },
+          {
+            "id": 7,
+            "name": "Sahil Gupta",
+            "email": "sahil.gupta@example.com"
+          }
+        ]
+      }
+    ]
+  }
+]
