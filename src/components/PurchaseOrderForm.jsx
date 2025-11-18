@@ -13,7 +13,7 @@ const initialForm = {
   poEndDate: "",
   budget: "",
   currency: "INR",
-  reqSections: [], // will hold objects per REQ
+  reqSections: [],
 };
 
 function PurchaseOrderForm() {
@@ -21,9 +21,14 @@ function PurchaseOrderForm() {
   const [errors, setErrors] = useState({});
   const [submittedData, setSubmittedData] = useState(null);
 
+  // 🔥 FIX: Track previous client to prevent resetting on every render
+  const [prevClientId, setPrevClientId] = useState("");
+
   useEffect(() => {
-    // when client changes, reset reqSections
-    setForm((prev) => ({ ...prev, reqSections: [] }));
+    if (prevClientId !== form.clientId) {
+      setForm((prev) => ({ ...prev, reqSections: [] })); // reset only when client changes
+      setPrevClientId(form.clientId);
+    }
   }, [form.clientId]);
 
   const clientOptions = clientsData.map((c) => ({ id: c.id, name: c.name }));
@@ -39,7 +44,7 @@ function PurchaseOrderForm() {
       id: Date.now(),
       reqId: "",
       reqTitle: "",
-      talents: [], // {talentId, fields...}
+      talents: [],
     };
     setForm((prev) => ({
       ...prev,
@@ -66,6 +71,7 @@ function PurchaseOrderForm() {
 
   function validate() {
     const e = {};
+
     if (!form.clientId) e.clientId = "Client is required";
     if (!form.poType) e.poType = "PO Type is required";
     if (!form.poNumber) e.poNumber = "PO Number is required";
@@ -74,12 +80,15 @@ function PurchaseOrderForm() {
       e.receivedFromName = "Received From name is required";
     if (!form.receivedFromEmail) e.receivedFromEmail = "Valid email required";
     if (!form.poStartDate) e.poStartDate = "PO Start Date required";
+
     if (!form.poEndDate) e.poEndDate = "PO End Date required";
     if (form.poStartDate && form.poEndDate && form.poEndDate < form.poStartDate)
       e.poEndDate = "End date cannot be before start date";
+
     if (!form.budget) e.budget = "Budget is required";
     if (form.budget && !/^[0-9]{1,5}$/.test(form.budget))
       e.budget = "Budget must be numeric and up to 5 digits";
+
     if (!form.currency) e.currency = "Currency required";
 
     // Validate REQ sections
@@ -87,28 +96,35 @@ function PurchaseOrderForm() {
       e.reqSections = "At least one REQ section required";
     } else {
       const reqErrors = [];
-      form.reqSections.forEach((s, idx) => {
+
+      form.reqSections.forEach((s) => {
         const se = {};
+
         if (!s.reqId || !s.reqTitle) se.req = "Select a Job Title for this REQ";
-        // talents validation
+
         const selectedTalents = (s.talents || []).filter((t) => t.selected);
+
         if (form.poType === "Individual") {
           if (selectedTalents.length === 0)
             se.talents = "Select one talent for Individual PO";
           if (selectedTalents.length > 1)
             se.talents = "Only one talent allowed for Individual PO";
-        } else if (form.poType === "Group") {
+        }
+
+        if (form.poType === "Group") {
           if (selectedTalents.length < 2)
             se.talents = "Select at least two talents for Group PO";
         }
-        // each selected talent must have mandatory fields filled (e.g., assignedRate)
-        selectedTalents.forEach((t, ti) => {
+
+        selectedTalents.forEach((t) => {
           if (!t.assignedRate) {
-            se[`talent_${t.talentId}_rate`] = "Assigned rate required";
+            se[`talent_${t.id}_rate`] = "Assigned rate required";
           }
         });
+
         reqErrors.push(Object.keys(se).length ? se : null);
       });
+
       if (reqErrors.some((x) => x)) e.reqSections = reqErrors;
     }
 
@@ -122,7 +138,6 @@ function PurchaseOrderForm() {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    // Save (for this assessment, we'll set submittedData and log)
     setSubmittedData(form);
     console.log("Form submitted:", form);
   }
@@ -131,6 +146,7 @@ function PurchaseOrderForm() {
     setForm(initialForm);
     setErrors({});
     setSubmittedData(null);
+    setPrevClientId("");
   }
 
   const selectedClient = clientsData.find(
@@ -141,7 +157,9 @@ function PurchaseOrderForm() {
     <div>
       {!submittedData ? (
         <form onSubmit={handleSubmit} noValidate>
+          {/* ------------ Purchase Order Details ------------ */}
           <div className="row g-3">
+            {/* Client */}
             <div className="col-md-6">
               <label className="form-label">Client Name *</label>
               <select
@@ -164,6 +182,7 @@ function PurchaseOrderForm() {
               )}
             </div>
 
+            {/* PO Type */}
             <div className="col-md-6">
               <label className="form-label">Purchase Order Type *</label>
               <select
@@ -181,6 +200,7 @@ function PurchaseOrderForm() {
               )}
             </div>
 
+            {/* PO Number */}
             <div className="col-md-6">
               <label className="form-label">Purchase Order No. *</label>
               <input
@@ -196,6 +216,7 @@ function PurchaseOrderForm() {
               )}
             </div>
 
+            {/* Dates */}
             <div className="col-md-6">
               <label className="form-label">Received On *</label>
               <input
@@ -212,6 +233,7 @@ function PurchaseOrderForm() {
               )}
             </div>
 
+            {/* Received from name */}
             <div className="col-md-6">
               <label className="form-label">Received From - Name *</label>
               <input
@@ -230,6 +252,7 @@ function PurchaseOrderForm() {
               )}
             </div>
 
+            {/* Received from email */}
             <div className="col-md-6">
               <label className="form-label">Received From - Email *</label>
               <input
@@ -249,6 +272,7 @@ function PurchaseOrderForm() {
               )}
             </div>
 
+            {/* Dates */}
             <div className="col-md-6">
               <label className="form-label">PO Start Date *</label>
               <input
@@ -281,6 +305,7 @@ function PurchaseOrderForm() {
               )}
             </div>
 
+            {/* Budget */}
             <div className="col-md-4">
               <label className="form-label">Budget *</label>
               <input
@@ -297,6 +322,7 @@ function PurchaseOrderForm() {
               )}
             </div>
 
+            {/* Currency */}
             <div className="col-md-4">
               <label className="form-label">Currency *</label>
               <select
@@ -319,11 +345,11 @@ function PurchaseOrderForm() {
 
           <hr className="my-4" />
 
+          {/* ------------ Talent Details ------------ */}
           <div>
             <h5>Talent Details</h5>
             <p className="text-muted small">
-              Add REQ sections and select talents. "Add Another" visible only
-              for Group PO.
+              Add REQ sections and select talents.
             </p>
 
             {form.reqSections.map((s, idx) => (
@@ -368,6 +394,7 @@ function PurchaseOrderForm() {
 
           <hr className="my-4" />
 
+          {/* ------------ Buttons ------------ */}
           <div className="d-flex gap-2">
             <button type="submit" className="btn btn-primary">
               Submit
@@ -404,9 +431,7 @@ function PurchaseOrderForm() {
             </button>
             <button
               className="btn btn-success ms-2"
-              onClick={() => {
-                alert("Submission final. Check console for data.");
-              }}
+              onClick={() => alert("Submission final.")}
             >
               Finish
             </button>
