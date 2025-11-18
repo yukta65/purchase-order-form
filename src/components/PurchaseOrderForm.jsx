@@ -13,7 +13,7 @@ const initialForm = {
   poEndDate: "",
   budget: "",
   currency: "INR",
-  reqSections: [],
+  reqSections: [], // each: { id, reqId, reqTitle, talents: [{id,name,email,selected,assignedRate,notes,...}] }
 };
 
 function PurchaseOrderForm() {
@@ -21,14 +21,32 @@ function PurchaseOrderForm() {
   const [errors, setErrors] = useState({});
   const [submittedData, setSubmittedData] = useState(null);
 
-  // 🔥 FIX: Track previous client to prevent resetting on every render
   const [prevClientId, setPrevClientId] = useState("");
 
+  // When client changes, reset reqSections & add one empty section by default
   useEffect(() => {
     if (prevClientId !== form.clientId) {
-      setForm((prev) => ({ ...prev, reqSections: [] })); // reset only when client changes
+      setForm((prev) => ({
+        ...initialForm,
+        clientId: form.clientId,
+        currency: prev.currency || "INR",
+        poType: prev.poType || "", // keep existing PO type if wanted, else blank
+        // create one empty REQ section only if a client is selected
+        reqSections: form.clientId
+          ? [
+              {
+                id: Date.now(),
+                reqId: "",
+                reqTitle: "",
+                talents: [],
+              },
+            ]
+          : [],
+      }));
       setPrevClientId(form.clientId);
+      setErrors({});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.clientId]);
 
   const clientOptions = clientsData.map((c) => ({ id: c.id, name: c.name }));
@@ -52,6 +70,7 @@ function PurchaseOrderForm() {
     }));
   }
 
+  // Update a specific REQ section (full replacement of that section object)
   function updateReqSection(id, updated) {
     setForm((prev) => ({
       ...prev,
@@ -80,27 +99,28 @@ function PurchaseOrderForm() {
       e.receivedFromName = "Received From name is required";
     if (!form.receivedFromEmail) e.receivedFromEmail = "Valid email required";
     if (!form.poStartDate) e.poStartDate = "PO Start Date required";
-
     if (!form.poEndDate) e.poEndDate = "PO End Date required";
-    if (form.poStartDate && form.poEndDate && form.poEndDate < form.poStartDate)
+    if (
+      form.poStartDate &&
+      form.poEndDate &&
+      String(form.poEndDate) < String(form.poStartDate)
+    )
       e.poEndDate = "End date cannot be before start date";
 
     if (!form.budget) e.budget = "Budget is required";
-    if (form.budget && !/^[0-9]{1,5}$/.test(form.budget))
+    if (form.budget && !/^[0-9]{1,5}$/.test(String(form.budget)))
       e.budget = "Budget must be numeric and up to 5 digits";
-
     if (!form.currency) e.currency = "Currency required";
 
-    // Validate REQ sections
-    if (form.reqSections.length === 0) {
+    // REQ sections validation
+    if (!form.reqSections || form.reqSections.length === 0) {
       e.reqSections = "At least one REQ section required";
     } else {
       const reqErrors = [];
-
-      form.reqSections.forEach((s) => {
+      form.reqSections.forEach((s, idx) => {
         const se = {};
-
-        if (!s.reqId || !s.reqTitle) se.req = "Select a Job Title for this REQ";
+        if (!s.reqId)
+          se.req = "Job Title / REQ Name is required for this section";
 
         const selectedTalents = (s.talents || []).filter((t) => t.selected);
 
@@ -109,31 +129,31 @@ function PurchaseOrderForm() {
             se.talents = "Select one talent for Individual PO";
           if (selectedTalents.length > 1)
             se.talents = "Only one talent allowed for Individual PO";
-        }
-
-        if (form.poType === "Group") {
+        } else if (form.poType === "Group") {
           if (selectedTalents.length < 2)
             se.talents = "Select at least two talents for Group PO";
         }
 
+        // each selected talent must have assignedRate (example mandatory)
         selectedTalents.forEach((t) => {
-          if (!t.assignedRate) {
-            se[`talent_${t.id}_rate`] = "Assigned rate required";
+          if (!t.assignedRate || String(t.assignedRate).trim() === "") {
+            se[`talent_${t.id}_rate`] =
+              "Assigned rate is required for selected talent";
           }
         });
 
         reqErrors.push(Object.keys(se).length ? se : null);
       });
 
-      if (reqErrors.some((x) => x)) e.reqSections = reqErrors;
+      if (reqErrors.some(Boolean)) e.reqSections = reqErrors;
     }
 
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
-  function handleSubmit(e) {
-    e.preventDefault();
+  function handleSubmit(ev) {
+    ev.preventDefault();
     if (!validate()) {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -157,9 +177,7 @@ function PurchaseOrderForm() {
     <div>
       {!submittedData ? (
         <form onSubmit={handleSubmit} noValidate>
-          {/* ------------ Purchase Order Details ------------ */}
           <div className="row g-3">
-            {/* Client */}
             <div className="col-md-6">
               <label className="form-label">Client Name *</label>
               <select
@@ -182,7 +200,6 @@ function PurchaseOrderForm() {
               )}
             </div>
 
-            {/* PO Type */}
             <div className="col-md-6">
               <label className="form-label">Purchase Order Type *</label>
               <select
@@ -200,7 +217,6 @@ function PurchaseOrderForm() {
               )}
             </div>
 
-            {/* PO Number */}
             <div className="col-md-6">
               <label className="form-label">Purchase Order No. *</label>
               <input
@@ -216,7 +232,6 @@ function PurchaseOrderForm() {
               )}
             </div>
 
-            {/* Dates */}
             <div className="col-md-6">
               <label className="form-label">Received On *</label>
               <input
@@ -233,7 +248,6 @@ function PurchaseOrderForm() {
               )}
             </div>
 
-            {/* Received from name */}
             <div className="col-md-6">
               <label className="form-label">Received From - Name *</label>
               <input
@@ -252,7 +266,6 @@ function PurchaseOrderForm() {
               )}
             </div>
 
-            {/* Received from email */}
             <div className="col-md-6">
               <label className="form-label">Received From - Email *</label>
               <input
@@ -272,7 +285,6 @@ function PurchaseOrderForm() {
               )}
             </div>
 
-            {/* Dates */}
             <div className="col-md-6">
               <label className="form-label">PO Start Date *</label>
               <input
@@ -305,7 +317,6 @@ function PurchaseOrderForm() {
               )}
             </div>
 
-            {/* Budget */}
             <div className="col-md-4">
               <label className="form-label">Budget *</label>
               <input
@@ -322,7 +333,6 @@ function PurchaseOrderForm() {
               )}
             </div>
 
-            {/* Currency */}
             <div className="col-md-4">
               <label className="form-label">Currency *</label>
               <select
@@ -345,15 +355,15 @@ function PurchaseOrderForm() {
 
           <hr className="my-4" />
 
-          {/* ------------ Talent Details ------------ */}
           <div>
             <h5>Talent Details</h5>
             <p className="text-muted small">
-              Add REQ sections and select talents.
+              Add REQ sections and select talents. "Add Another" visible only
+              for Group PO.
             </p>
 
             {form.reqSections.map((s, idx) => (
-              <div key={s.id} className="req-section">
+              <div key={s.id} className="req-section mb-3">
                 <ReqSection
                   section={s}
                   index={idx}
@@ -394,7 +404,6 @@ function PurchaseOrderForm() {
 
           <hr className="my-4" />
 
-          {/* ------------ Buttons ------------ */}
           <div className="d-flex gap-2">
             <button type="submit" className="btn btn-primary">
               Submit
@@ -423,9 +432,7 @@ function PurchaseOrderForm() {
           <div className="mt-3">
             <button
               className="btn btn-outline-secondary"
-              onClick={() => {
-                setSubmittedData(null);
-              }}
+              onClick={() => setSubmittedData(null)}
             >
               Edit
             </button>
