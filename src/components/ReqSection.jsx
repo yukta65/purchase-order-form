@@ -17,7 +17,6 @@ function ReqSection({
     setLocal(section);
   }, [section]);
 
-  // Notify parent when important fields change
   useEffect(() => {
     onUpdate({
       reqId: local.reqId,
@@ -30,12 +29,11 @@ function ReqSection({
 
   function handleReqChange(e) {
     if (isViewMode) return;
-
     const value = e.target.value;
     const found = reqOptions.find((r) => r.id === value);
 
     if (found) {
-      const mappedTalents = found.talents.map((t) => ({
+      const newTalents = found.talents.map((t) => ({
         id: t.id,
         name: t.name,
         email: t.email,
@@ -44,19 +42,12 @@ function ReqSection({
         notes: "",
       }));
 
-      setLocal((prev) => ({
-        ...prev,
+      setLocal({
+        ...local,
         reqId: found.id,
         reqTitle: found.title,
-        talents: mappedTalents,
-      }));
-    } else {
-      setLocal((prev) => ({
-        ...prev,
-        reqId: "",
-        reqTitle: "",
-        talents: [],
-      }));
+        talents: newTalents,
+      });
     }
   }
 
@@ -64,14 +55,14 @@ function ReqSection({
     if (isViewMode) return;
 
     setLocal((prev) => {
-      let updated = [...prev.talents];
+      let updated = prev.talents.map((t) =>
+        t.id === id ? { ...t, selected } : t
+      );
 
       if (poType === "Individual") {
         updated = updated.map((t) =>
           t.id === id ? { ...t, selected } : { ...t, selected: false }
         );
-      } else {
-        updated = updated.map((t) => (t.id === id ? { ...t, selected } : t));
       }
 
       return { ...prev, talents: updated };
@@ -90,10 +81,10 @@ function ReqSection({
   }
 
   return (
-    <div className="border p-3 mb-3 rounded bg-light">
-      <div className="d-flex justify-content-between">
+    <div className="border rounded p-3 mb-3 bg-light">
+      <div className="d-flex justify-content-between align-items-center">
         <h6>
-          REQ #{index + 1} {local.reqTitle && ` - ${local.reqTitle}`}
+          REQ #{index + 1} {local.reqTitle && `- ${local.reqTitle}`}
         </h6>
 
         {!isViewMode && (
@@ -103,10 +94,11 @@ function ReqSection({
         )}
       </div>
 
-      <div className="row g-2">
+      <div className="row g-2 mt-2">
         {/* REQ NAME */}
         <div className="col-md-6">
           <label className="form-label">Job Title / REQ Name *</label>
+
           {isViewMode ? (
             <input className="form-control" value={local.reqTitle} readOnly />
           ) : (
@@ -115,7 +107,7 @@ function ReqSection({
               value={local.reqId}
               onChange={handleReqChange}
             >
-              <option value="">Select Job</option>
+              <option value="">Select</option>
               {reqOptions.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.title}
@@ -123,6 +115,7 @@ function ReqSection({
               ))}
             </select>
           )}
+
           {errors?.req && <div className="text-danger small">{errors.req}</div>}
         </div>
 
@@ -137,7 +130,7 @@ function ReqSection({
         <h6>Talents</h6>
 
         {local.talents.length === 0 && (
-          <div className="text-muted small">No talents for this REQ.</div>
+          <div className="text-muted small">No talents available</div>
         )}
 
         {local.talents.map((t) => (
@@ -146,14 +139,14 @@ function ReqSection({
             talent={t}
             selected={t.selected}
             isViewMode={isViewMode}
+            errors={errors || {}}
             onToggle={(s) => toggleTalent(t.id, s)}
             onChange={(u) => updateTalent(t.id, u)}
-            errors={errors || {}}
           />
         ))}
 
         {errors?.talents && (
-          <div className="text-danger small mt-2">{errors.talents}</div>
+          <div className="text-danger small">{errors.talents}</div>
         )}
       </div>
     </div>
