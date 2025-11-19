@@ -156,59 +156,6 @@ export default function PurchaseOrderForm() {
     setFormKey((k) => k + 1);
   }
 
-  // PDF generator (jsPDF + autotable)
-  function downloadPdf() {
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    let y = 40;
-    doc.setFontSize(14);
-    doc.text("Purchase Order", 40, y);
-    y += 20;
-    doc.setFontSize(10);
-    doc.text(
-      `Client: ${
-        clientsData.find((c) => String(c.id) === String(form.clientId))?.name ||
-        ""
-      }`,
-      40,
-      y
-    );
-    y += 14;
-    doc.text(`PO Number: ${form.poNumber || ""}`, 40, y);
-    y += 14;
-
-    form.reqSections.forEach((s, idx) => {
-      y += 10;
-      doc.text(
-        `${idx + 1}. ${s.reqTitle || "-"} (REQ ID: ${s.reqId || "-"})`,
-        40,
-        y
-      );
-      y += 8;
-      const rows = (s.talents || [])
-        .filter((t) => t.selected)
-        .map((t) => [
-          t.name || "-",
-          t.role || t.email || "-",
-          t.assignedRate || "-",
-        ]);
-      if (rows.length === 0) {
-        doc.text("No talents selected", 60, y);
-        y += 14;
-      } else {
-        doc.autoTable({
-          startY: y,
-          head: [["Talent", "Role / Email", "Assigned Rate"]],
-          body: rows,
-          margin: { left: 40, right: 40 },
-          styles: { fontSize: 10 },
-        });
-        y = doc.lastAutoTable.finalY + 8;
-      }
-    });
-
-    doc.save(`purchase-order-${form.poNumber || "export"}.pdf`);
-  }
-
   const selectedClient = clientsData.find(
     (c) => String(c.id) === String(form.clientId)
   );
@@ -216,7 +163,7 @@ export default function PurchaseOrderForm() {
   return (
     <div className="po-container">
       <div className="d-flex align-items-center mb-3">
-        <h3 className="me-auto">Purchase Order | New</h3>
+        <h3 className="me-auto">Purchase Order</h3>
       </div>
 
       <form key={formKey} onSubmit={handleSubmit}>
