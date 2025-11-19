@@ -20,16 +20,16 @@ function PurchaseOrderForm() {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [isViewMode, setIsViewMode] = useState(false);
+  const [formKey, setFormKey] = useState(0);
   const [prevClientId, setPrevClientId] = useState("");
-  const [formKey, setFormKey] = useState(0); // force remount when toggled
 
-  // When client changes: reset reqSections and bump key
+  // RESET req sections when client changes
   useEffect(() => {
     if (prevClientId !== form.clientId) {
-      setForm((prev) => ({
+      setForm({
         ...initialForm,
         clientId: form.clientId,
-        currency: prev.currency || "INR",
+        currency: "INR",
         reqSections: form.clientId
           ? [
               {
@@ -40,32 +40,36 @@ function PurchaseOrderForm() {
               },
             ]
           : [],
-      }));
+      });
       setPrevClientId(form.clientId);
       setErrors({});
       setFormKey((k) => k + 1);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.clientId]);
 
   const clientOptions = clientsData.map((c) => ({ id: c.id, name: c.name }));
 
   function handleChange(e) {
     const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
-    setErrors((p) => ({ ...p, [name]: null }));
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: null }));
   }
 
   function addReqSection() {
-    const s = { id: Date.now(), reqId: "", reqTitle: "", talents: [] };
+    const s = {
+      id: Date.now(),
+      reqId: "",
+      reqTitle: "",
+      talents: [],
+    };
     setForm((prev) => ({ ...prev, reqSections: [...prev.reqSections, s] }));
   }
 
   function updateReqSection(id, updated) {
     setForm((prev) => ({
       ...prev,
-      reqSections: prev.reqSections.map((sec) =>
-        sec.id === id ? { ...sec, ...updated } : sec
+      reqSections: prev.reqSections.map((s) =>
+        s.id === id ? { ...s, ...updated } : s
       ),
     }));
   }
@@ -84,44 +88,41 @@ function PurchaseOrderForm() {
     if (!form.clientId) e.clientId = "Client is required";
     if (!form.poType) e.poType = "PO Type is required";
     if (!form.poNumber) e.poNumber = "PO Number required";
-    if (!form.receivedOn) e.receivedOn = "Date required";
+    if (!form.receivedOn) e.receivedOn = "Required";
     if (!form.receivedFromName) e.receivedFromName = "Required";
-    if (!form.receivedFromEmail) e.receivedFromEmail = "Valid email required";
+    if (!form.receivedFromEmail) e.receivedFromEmail = "Required";
     if (!form.poStartDate) e.poStartDate = "Required";
     if (!form.poEndDate) e.poEndDate = "Required";
     if (form.poStartDate && form.poEndDate && form.poEndDate < form.poStartDate)
       e.poEndDate = "End date cannot be before start date";
     if (!form.budget) e.budget = "Budget required";
-    if (form.budget && !/^[0-9]{1,5}$/.test(String(form.budget)))
-      e.budget = "Budget must be numeric and up to 5 digits";
 
-    // REQ validation
     const reqErrs = [];
-    if (!form.reqSections || form.reqSections.length === 0) {
-      e.reqSections = "At least one REQ section required";
-    } else {
-      form.reqSections.forEach((s) => {
-        const se = {};
-        if (!s.reqId) se.req = "REQ Name required";
 
-        const selected = (s.talents || []).filter((t) => t.selected);
+    form.reqSections.forEach((s) => {
+      const se = {};
 
-        if (form.poType === "Individual") {
-          if (selected.length !== 1) se.talents = "Select exactly 1 talent";
-        } else if (form.poType === "Group") {
-          if (selected.length < 2) se.talents = "Select 2 or more talents";
+      if (!s.reqId) se.req = "REQ Name required";
+
+      const selected = s.talents.filter((t) => t.selected);
+
+      if (form.poType === "Individual") {
+        if (selected.length !== 1) se.talents = "Select exactly 1 talent";
+      } else {
+        if (selected.length < 2)
+          se.talents = "Select at least 2 talents for Group PO";
+      }
+
+      selected.forEach((t) => {
+        if (!t.assignedRate) {
+          se[`rate_${t.id}`] = "Assigned rate required";
         }
-
-        selected.forEach((t) => {
-          if (!t.assignedRate || !String(t.assignedRate).trim()) {
-            se[`rate_${t.id}`] = "Assigned Rate required";
-          }
-        });
-
-        reqErrs.push(Object.keys(se).length ? se : null);
       });
-      if (reqErrs.some(Boolean)) e.reqSections = reqErrs;
-    }
+
+      reqErrs.push(Object.keys(se).length ? se : null);
+    });
+
+    if (reqErrs.some(Boolean)) e.reqSections = reqErrs;
 
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -133,9 +134,9 @@ function PurchaseOrderForm() {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
+
     setIsViewMode(true);
-    setFormKey((k) => k + 1); // ensure children remount and show read-only
-    console.log("Saved form data:", form);
+    setFormKey((k) => k + 1);
   }
 
   const selectedClient = clientsData.find(
@@ -147,66 +148,15 @@ function PurchaseOrderForm() {
       <h3 className="mb-3">Purchase Order Form</h3>
 
       {isViewMode && (
-        <div className="alert alert-info">Form saved — read-only mode</div>
+        <div className="alert alert-info">Form saved — Read Only Mode</div>
       )}
 
       <form key={formKey} onSubmit={handleSubmit}>
         <div className="row g-3">
-          {/* Client */}
-          <div className="col-md-6">
-            <label className="form-label">Client *</label>
-            {isViewMode ? (
-              <input
-                className="form-control"
-                value={selectedClient?.name || ""}
-                readOnly
-              />
-            ) : (
-              <select
-                className={
-                  "form-select " + (errors.clientId ? "is-invalid" : "")
-                }
-                name="clientId"
-                value={form.clientId}
-                onChange={handleChange}
-              >
-                <option value="">Select client</option>
-                {clientOptions.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            {errors.clientId && (
-              <div className="invalid-feedback">{errors.clientId}</div>
-            )}
-          </div>
-
-          {/* PO Type */}
-          <div className="col-md-6">
-            <label className="form-label">PO Type *</label>
-            {isViewMode ? (
-              <input className="form-control" value={form.poType} readOnly />
-            ) : (
-              <select
-                className={"form-select " + (errors.poType ? "is-invalid" : "")}
-                name="poType"
-                value={form.poType}
-                onChange={handleChange}
-              >
-                <option value="">Select</option>
-                <option value="Individual">Individual</option>
-                <option value="Group">Group</option>
-              </select>
-            )}
-            {errors.poType && (
-              <div className="invalid-feedback">{errors.poType}</div>
-            )}
-          </div>
-
-          {/* Other fields */}
+          {/* --- Standard Inputs --- */}
           {[
+            ["clientId", "Client", "select"],
+            ["poType", "PO Type", "select"],
             ["poNumber", "PO Number"],
             ["receivedOn", "Received On", "date"],
             ["receivedFromName", "Received From - Name"],
@@ -216,14 +166,65 @@ function PurchaseOrderForm() {
           ].map(([name, label, type]) => (
             <div className="col-md-6" key={name}>
               <label className="form-label">{label} *</label>
-              <input
-                className={"form-control " + (errors[name] ? "is-invalid" : "")}
-                name={name}
-                type={type || "text"}
-                value={form[name]}
-                onChange={handleChange}
-                readOnly={isViewMode}
-              />
+
+              {type === "select" ? (
+                name === "clientId" ? (
+                  isViewMode ? (
+                    <input
+                      className="form-control"
+                      readOnly
+                      value={selectedClient?.name || ""}
+                    />
+                  ) : (
+                    <select
+                      className={
+                        "form-select " + (errors[name] ? "is-invalid" : "")
+                      }
+                      name={name}
+                      value={form[name]}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select client</option>
+                      {clientOptions.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  )
+                ) : isViewMode ? (
+                  <input
+                    className="form-control"
+                    readOnly
+                    value={form.poType}
+                  />
+                ) : (
+                  <select
+                    className={
+                      "form-select " + (errors[name] ? "is-invalid" : "")
+                    }
+                    name={name}
+                    value={form[name]}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select</option>
+                    <option value="Individual">Individual</option>
+                    <option value="Group">Group</option>
+                  </select>
+                )
+              ) : (
+                <input
+                  type={type || "text"}
+                  name={name}
+                  value={form[name]}
+                  onChange={handleChange}
+                  readOnly={isViewMode}
+                  className={
+                    "form-control " + (errors[name] ? "is-invalid" : "")
+                  }
+                />
+              )}
+
               {errors[name] && (
                 <div className="invalid-feedback">{errors[name]}</div>
               )}
@@ -234,12 +235,12 @@ function PurchaseOrderForm() {
           <div className="col-md-4">
             <label className="form-label">Budget *</label>
             <input
-              className={"form-control " + (errors.budget ? "is-invalid" : "")}
-              name="budget"
               type="number"
+              name="budget"
               value={form.budget}
               onChange={handleChange}
               readOnly={isViewMode}
+              className={"form-control " + (errors.budget ? "is-invalid" : "")}
             />
             {errors.budget && (
               <div className="invalid-feedback">{errors.budget}</div>
@@ -250,11 +251,11 @@ function PurchaseOrderForm() {
           <div className="col-md-4">
             <label className="form-label">Currency *</label>
             <select
-              className={"form-select " + (errors.currency ? "is-invalid" : "")}
+              className="form-select"
+              disabled={isViewMode}
               name="currency"
               value={form.currency}
               onChange={handleChange}
-              disabled={isViewMode}
             >
               <option value="INR">INR</option>
               <option value="USD">USD</option>
@@ -265,7 +266,7 @@ function PurchaseOrderForm() {
 
         <hr />
 
-        <h5>Talent Details (REQ Sections)</h5>
+        <h5>REQ Sections</h5>
 
         {form.reqSections.map((s, idx) => (
           <ReqSection
@@ -274,15 +275,15 @@ function PurchaseOrderForm() {
             index={idx}
             client={selectedClient}
             poType={form.poType}
-            onUpdate={(u) => updateReqSection(s.id, u)}
-            onRemove={() => removeReqSection(s.id)}
             isViewMode={isViewMode}
             errors={errors.reqSections?.[idx] || {}}
+            onUpdate={(u) => updateReqSection(s.id, u)}
+            onRemove={() => removeReqSection(s.id)}
           />
         ))}
 
         {!isViewMode && (
-          <div className="mb-3">
+          <div className="mt-3">
             <button
               type="button"
               className="btn btn-outline-primary me-2"
@@ -290,6 +291,7 @@ function PurchaseOrderForm() {
             >
               Add REQ Section
             </button>
+
             {form.poType === "Group" && (
               <button
                 type="button"
@@ -311,11 +313,10 @@ function PurchaseOrderForm() {
             </button>
             <button
               type="button"
-              className="btn btn-secondary"
+              className="btn btn-warning"
               onClick={() => {
                 setForm(initialForm);
                 setErrors({});
-                setPrevClientId("");
                 setFormKey((k) => k + 1);
               }}
             >
@@ -323,17 +324,28 @@ function PurchaseOrderForm() {
             </button>
           </div>
         ) : (
-          <div>
+          <div className="d-flex gap-2">
             <button
               type="button"
               className="btn btn-warning"
               onClick={() => {
                 setIsViewMode(false);
-                setErrors({});
-                setFormKey((k) => k + 1); // remount children to pick up edit mode
+                setFormKey((k) => k + 1);
               }}
             >
               Edit Again
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-success"
+              onClick={() => {
+                setForm(initialForm);
+                setIsViewMode(false);
+                setFormKey((k) => k + 1);
+              }}
+            >
+              New Form
             </button>
           </div>
         )}
