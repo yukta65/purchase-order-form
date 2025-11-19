@@ -11,38 +11,85 @@ function ReqSection({
   isViewMode,
   errors,
 }) {
-  const [local, setLocal] = useState(section);
+  // local state mirrors the section prop, but we will NOT call onUpdate in a broad useEffect
+  const [local, setLocal] = useState(
+    section || { reqId: "", reqTitle: "", talents: [] }
+  );
 
+  // keep local in sync when parent intentionally replaces the section object (e.g., remount)
   useEffect(() => {
-    setLocal(section);
+    setLocal(section || { reqId: "", reqTitle: "", talents: [] });
   }, [section]);
-
-  useEffect(() => {
-    onUpdate(local);
-  }, [local]);
 
   const reqOptions = client?.reqs || [];
 
+  // Called when user selects a job title (explicit user action)
   function handleReqChange(e) {
     if (isViewMode) return;
-
-    const { value } = e.target;
-    const found = reqOptions.find((r) => r.id === value);
+    const value = e.target.value;
+    // compare as string to avoid type mismatch
+    const found = reqOptions.find((r) => String(r.id) === String(value));
 
     if (!found) {
-      setLocal({ ...local, reqId: "", reqTitle: "", talents: [] });
+      const updated = { ...local, reqId: "", reqTitle: "", talents: [] };
+      setLocal(updated);
+      onUpdate(updated); // explicit update
       return;
     }
 
-    setLocal({
+    const newTalents = (found.talents || []).map((t) => ({
+      id: t.id,
+      name: t.name,
+      email: t.email,
+      role: t.role || "",
+      selected: false,
+      assignedRate: t.assignedRate || "",
+      notes: t.notes || "",
+    }));
+
+    const updated = {
       ...local,
       reqId: found.id,
       reqTitle: found.title,
-      talents: found.talents.map((t) => ({
-        ...t,
-        selected: false,
-        assignedRate: "",
-      })),
+      talents: newTalents,
+    };
+    setLocal(updated);
+    onUpdate(updated); // explicit update
+  }
+
+  // Toggle talent selection; updates local and notifies parent explicitly
+  function toggleTalent(id, selected) {
+    if (isViewMode) return;
+
+    setLocal((prev) => {
+      let updated = prev.talents.map((t) =>
+        t.id === id ? { ...t, selected } : t
+      );
+
+      if (poType === "Individual" && selected) {
+        // ensure only this one is selected
+        updated = updated.map((t) =>
+          t.id === id ? { ...t, selected: true } : { ...t, selected: false }
+        );
+      }
+
+      const newLocal = { ...prev, talents: updated };
+      onUpdate(newLocal); // explicit update
+      return newLocal;
+    });
+  }
+
+  // Update specific talent fields and notify parent explicitly
+  function updateTalent(id, updates) {
+    if (isViewMode) return;
+
+    setLocal((prev) => {
+      const updatedTalents = prev.talents.map((t) =>
+        t.id === id ? { ...t, ...updates } : t
+      );
+      const newLocal = { ...prev, talents: updatedTalents };
+      onUpdate(newLocal); // explicit update
+      return newLocal;
     });
   }
 
@@ -54,13 +101,15 @@ function ReqSection({
         </h6>
 
         {!isViewMode && (
-          <button className="btn btn-sm btn-outline-danger" onClick={onRemove}>
+          <button
+            className="btn btn-sm btn-outline-danger"
+            onClick={() => onRemove()}
+          >
             Remove
           </button>
         )}
       </div>
 
-      {/* JOB TITLE */}
       <div className="row g-2 mt-2">
         <div className="col-md-6">
           <label className="form-label">Job Title / REQ Name *</label>
@@ -72,7 +121,7 @@ function ReqSection({
             />
           ) : (
             <select
-              className="form-select"
+              className={"form-select " + (errors?.req ? "is-invalid" : "")}
               value={local.reqId || ""}
               onChange={handleReqChange}
             >
@@ -84,7 +133,9 @@ function ReqSection({
               ))}
             </select>
           )}
-          {errors.req && <div className="text-danger small">{errors.req}</div>}
+          {errors?.req && (
+            <div className="text-danger small mt-1">{errors.req}</div>
+          )}
         </div>
 
         <div className="col-md-6">
@@ -93,73 +144,59 @@ function ReqSection({
         </div>
       </div>
 
-      {/* TALENTS */}
-      <h6 className="mt-3">Talent Details</h6>
+      <div className="mt-3">
+        <h6>Talents</h6>
 
-      {/* VIEW MODE TALENT TABLE */}
-      {isViewMode ? (
-        local.talents.length === 0 ? (
-          <div className="text-muted">No talents available.</div>
+        {isViewMode ? (
+          // View-mode: show selected talents in a neat table (only selected ones)
+          local.talents &&
+          local.talents.filter((t) => t.selected).length > 0 ? (
+            <table className="table table-sm table-bordered mt-2">
+              <thead className="table-secondary">
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Assigned Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {local.talents
+                  .filter((t) => t.selected)
+                  .map((t) => (
+                    <tr key={t.id}>
+                      <td>{t.name}</td>
+                      <td>{t.role || "-"}</td>
+                      <td>{t.assignedRate || "-"}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="text-muted small">No talents selected.</div>
+          )
         ) : (
-          <table className="table table-bordered table-striped mt-2">
-            <thead className="table-secondary">
-              <tr>
-                <th>Talent Name</th>
-                <th>Role</th>
-                <th>Assigned Rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {local.talents
-                .filter((t) => t.selected)
-                .map((t) => (
-                  <tr key={t.id}>
-                    <td>{t.name}</td>
-                    <td>{t.role}</td>
-                    <td>{t.assignedRate}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        )
-      ) : (
-        <>
-          {local.talents.length === 0 && (
-            <div className="text-muted small">
-              Select a Job Title to load talents.
-            </div>
-          )}
-          {local.talents.map((t) => (
-            <TalentRow
-              key={t.id}
-              talent={t}
-              selected={t.selected}
-              poType={poType}
-              errors={errors}
-              onToggle={(sel) =>
-                setLocal({
-                  ...local,
-                  talents: local.talents.map((x) =>
-                    x.id === t.id ? { ...x, selected: sel } : x
-                  ),
-                })
-              }
-              onChange={(u) =>
-                setLocal({
-                  ...local,
-                  talents: local.talents.map((x) =>
-                    x.id === t.id ? { ...x, ...u } : x
-                  ),
-                })
-              }
-            />
-          ))}
-        </>
-      )}
+          <>
+            {(!local.talents || local.talents.length === 0) && (
+              <div className="text-muted small">
+                Select a Job Title to load talents.
+              </div>
+            )}
 
-      {errors.talents && (
-        <div className="text-danger small mt-1">{errors.talents}</div>
-      )}
+            {local.talents &&
+              local.talents.map((t) => (
+                <TalentRow
+                  key={t.id}
+                  talent={t}
+                  selected={!!t.selected}
+                  poType={poType}
+                  errors={errors || {}}
+                  onToggle={(sel) => toggleTalent(t.id, sel)}
+                  onChange={(upd) => updateTalent(t.id, upd)}
+                />
+              ))}
+          </>
+        )}
+      </div>
     </div>
   );
 }

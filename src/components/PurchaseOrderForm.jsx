@@ -145,8 +145,11 @@ function PurchaseOrderForm() {
 
   return (
     <div>
-      <h3 className="mb-3">Purchase Order Form</h3>
-
+      <div className="container py-4">
+        <div className="po-card">
+          <h3 className="mb-3">Purchase Order Form</h3>
+        </div>
+      </div>
       {isViewMode && (
         <div className="alert alert-info">Form saved — Read Only Mode</div>
       )}

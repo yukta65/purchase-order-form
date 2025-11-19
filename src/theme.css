@@ -1,0 +1,112 @@
+/* ----------------------------------------
+   GLOBAL THEME
+---------------------------------------- */
+
+/* Page background */
+body {
+  background-color: #f4f7f9;
+  font-family: "Inter", sans-serif;
+}
+
+/* Card styling */
+.po-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+  transition: 0.3s;
+}
+
+.po-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Titles */
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+}
+
+/* Buttons */
+.btn-primary {
+  background-color: #1976d2 !important;
+  border-color: #1976d2 !important;
+}
+
+.btn-primary:hover {
+  background-color: #0d47a1 !important;
+}
+
+.btn-warning {
+  background-color: #ff9800 !important;
+  border-color: #ff9800 !important;
+}
+
+.btn-outline-primary {
+  border-color: #1976d2 !important;
+  color: #1976d2 !important;
+}
+
+.btn-outline-primary:hover {
+  background-color: #1976d2 !important;
+  color: white !important;
+}
+
+/* Table styling */
+.table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: #eef4ff;
+}
+
+.table-secondary {
+  background: #d9e8ff;
+}
+
+/* REQ section box */
+.req-box {
+  border-left: 4px solid #1976d2;
+  border-radius: 8px;
+  padding: 18px;
+  background: #ffffff;
+  margin-bottom: 20px;
+}
+
+/* Talent row */
+.talent-box {
+  padding: 12px;
+  border-radius: 8px;
+  background: #fafafa;
+  margin-bottom: 10px;
+  border: 1px solid #e3e3e3;
+}
+
+.talent-box:hover {
+  background: #f1f7ff;
+  border-color: #1976d2;
+}
+
+/* Highlighting required errors */
+.is-invalid {
+  border-color: #d9534f !important;
+}
+
+/* Form labels */
+.form-label {
+  font-weight: 600;
+}
+
+/* Section headers */
+.section-title {
+  background: #e8f0ff;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+/* Buttons spacing */
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px !important;
+}
