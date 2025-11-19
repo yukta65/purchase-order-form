@@ -1,0 +1,96 @@
+/* po-form.css - modern PO theme */
+
+/* container */
+.po-container {
+  background: #fff;
+  max-width: 1200px;
+  margin: 24px auto;
+  padding: 22px;
+  border-radius: 10px;
+  box-shadow: 0 6px 28px rgba(12, 22, 40, 0.06);
+}
+
+/* labels */
+.po-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #333;
+}
+
+/* inputs */
+.po-input {
+  background: #fbfbfb;
+  border: 1px solid #e6e9ee;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+.po-select {
+  background: #fbfbfb;
+  border-radius: 8px;
+}
+
+/* section title */
+.po-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #1f2937;
+}
+
+/* REQ box */
+.req-box {
+  border-left: 4px solid #f6a623;
+  background: #fff;
+  padding: 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.03);
+}
+
+/* Talent box */
+.talent-box {
+  border: 1px solid #eef2f6;
+  background: #fcfcfd;
+  padding: 14px;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+/* talent name */
+.talent-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* add button */
+.add-btn {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px dashed #f6a623;
+  background: #fff8f0;
+  color: #f57c00;
+  cursor: pointer;
+}
+
+/* remove button */
+.remove-btn {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  background: #fff5f6;
+  color: #c53030;
+  cursor: pointer;
+}
+
+/* small text */
+.small {
+  font-size: 12px;
+}
+
+/* invalid highlight override */
+.is-invalid {
+  border-color: #e03131 !important;
+  box-shadow: none !important;
+}

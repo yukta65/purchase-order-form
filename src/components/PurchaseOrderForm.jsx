@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import clientsData from "../data/clients.json";
 import ReqSection from "./ReqSection";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
+import "../styles/po-form.css"; // new design CSS
+import "bootstrap/dist/css/bootstrap.min.css";
 
 const initialForm = {
   clientId: "",
@@ -16,57 +20,48 @@ const initialForm = {
   reqSections: [],
 };
 
-function PurchaseOrderForm() {
+function emailIsValid(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || ""));
+}
+function poNumberIsValid(val) {
+  return /^[A-Za-z0-9\-_.\/ ]+$/.test(String(val || ""));
+}
+
+export default function PurchaseOrderForm() {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [isViewMode, setIsViewMode] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
-  // Load 1 default REQ section when client is selected
+  // Once client chosen, ensure there's at least one REQ section
   useEffect(() => {
-    if (form.clientId) {
+    if (form.clientId && (!form.reqSections || form.reqSections.length === 0)) {
       setForm((prev) => ({
         ...prev,
-        reqSections:
-          prev.reqSections.length === 0
-            ? [
-                {
-                  id: Date.now(),
-                  reqId: "",
-                  reqTitle: "",
-                  talents: [],
-                },
-              ]
-            : prev.reqSections,
+        reqSections: [
+          {
+            id: Date.now(),
+            reqId: "",
+            reqTitle: "",
+            talents: [],
+          },
+        ],
       }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.clientId]);
 
-  const clientOptions = clientsData.map((c) => ({
-    id: c.id,
-    name: c.name,
-  }));
+  const clientOptions = clientsData.map((c) => ({ id: c.id, name: c.name }));
 
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-
-    // Clear errors for field
     setErrors((prev) => ({ ...prev, [name]: null }));
   }
 
   function addReqSection() {
-    const newSection = {
-      id: Date.now(),
-      reqId: "",
-      reqTitle: "",
-      talents: [],
-    };
-
-    setForm((prev) => ({
-      ...prev,
-      reqSections: [...prev.reqSections, newSection],
-    }));
+    const s = { id: Date.now(), reqId: "", reqTitle: "", talents: [] };
+    setForm((prev) => ({ ...prev, reqSections: [...prev.reqSections, s] }));
   }
 
   function updateReqSection(id, updated) {
@@ -80,7 +75,6 @@ function PurchaseOrderForm() {
 
   function removeReqSection(id) {
     if (isViewMode) return;
-
     setForm((prev) => ({
       ...prev,
       reqSections: prev.reqSections.filter((s) => s.id !== id),
@@ -89,49 +83,51 @@ function PurchaseOrderForm() {
 
   function validate() {
     const e = {};
-
     if (!form.clientId) e.clientId = "Client is required";
     if (!form.poType) e.poType = "PO Type is required";
     if (!form.poNumber) e.poNumber = "PO Number required";
-    if (!form.receivedOn) e.receivedOn = "Required";
-    if (!form.receivedFromName) e.receivedFromName = "Required";
-    if (!form.receivedFromEmail) e.receivedFromEmail = "Required";
-    if (!form.poStartDate) e.poStartDate = "Required";
-    if (!form.poEndDate) e.poEndDate = "Required";
-
-    if (form.poEndDate < form.poStartDate)
+    else if (!poNumberIsValid(form.poNumber)) e.poNumber = "Invalid PO number";
+    if (!form.receivedOn) e.receivedOn = "Received On is required";
+    if (!form.receivedFromName) e.receivedFromName = "Sender name required";
+    if (!form.receivedFromEmail) e.receivedFromEmail = "Sender email required";
+    else if (!emailIsValid(form.receivedFromEmail))
+      e.receivedFromEmail = "Invalid email";
+    if (!form.poStartDate) e.poStartDate = "Start date required";
+    if (!form.poEndDate) e.poEndDate = "End date required";
+    if (
+      form.poStartDate &&
+      form.poEndDate &&
+      new Date(form.poEndDate) < new Date(form.poStartDate)
+    )
       e.poEndDate = "End date cannot be before start date";
-
     if (!form.budget) e.budget = "Budget required";
+    else if (!/^\d{1,5}$/.test(String(form.budget)))
+      e.budget = "Budget must be up to 5 digits";
 
-    // Validate REQ sections
-    const reqErrs = [];
-    form.reqSections.forEach((s) => {
-      const se = {};
-
-      if (!s.reqId) se.reqId = "REQ Name required";
-
-      const selected = s.talents.filter((t) => t.selected);
-
-      if (form.poType === "Individual") {
-        if (selected.length !== 1) se.talents = "Select exactly 1 talent";
-      }
-
-      if (form.poType === "Group") {
-        if (selected.length < 2)
-          se.talents = "Select at least 2 talents for Group PO";
-      }
-
-      selected.forEach((t) => {
-        if (!t.assignedRate) {
-          se[`rate_${t.id}`] = "Assigned rate required";
+    // validate REQ sections
+    if (!form.reqSections || form.reqSections.length === 0) {
+      e.reqSections = "At least one REQ section required";
+    } else {
+      const reqErrs = [];
+      for (const s of form.reqSections) {
+        const se = {};
+        if (!s.reqId) se.req = "Job Title / REQ required";
+        const selected = (s.talents || []).filter((t) => t.selected);
+        if (form.poType === "Individual") {
+          if (selected.length !== 1)
+            se.talents = "Select exactly 1 talent for Individual PO";
+        } else if (form.poType === "Group") {
+          if (selected.length < 2)
+            se.talents = "Select at least 2 talents for Group PO";
         }
-      });
-
-      reqErrs.push(Object.keys(se).length ? se : null);
-    });
-
-    if (reqErrs.some(Boolean)) e.reqSections = reqErrs;
+        for (const t of selected) {
+          if (!t.assignedRate || String(t.assignedRate).trim() === "")
+            se[`rate_${t.id}`] = "Assigned rate required";
+        }
+        reqErrs.push(Object.keys(se).length ? se : null);
+      }
+      if (reqErrs.some(Boolean)) e.reqSections = reqErrs;
+    }
 
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -139,14 +135,78 @@ function PurchaseOrderForm() {
 
   function handleSubmit(e) {
     e.preventDefault();
-
     if (!validate()) {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-
+    console.log("Saved form:", form);
     setIsViewMode(true);
     setFormKey((k) => k + 1);
+  }
+
+  function handleEditAgain() {
+    setIsViewMode(false);
+    setFormKey((k) => k + 1);
+  }
+
+  function handleNewForm() {
+    setForm(initialForm);
+    setIsViewMode(false);
+    setErrors({});
+    setFormKey((k) => k + 1);
+  }
+
+  // PDF generator (jsPDF + autotable)
+  function downloadPdf() {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    let y = 40;
+    doc.setFontSize(14);
+    doc.text("Purchase Order", 40, y);
+    y += 20;
+    doc.setFontSize(10);
+    doc.text(
+      `Client: ${
+        clientsData.find((c) => String(c.id) === String(form.clientId))?.name ||
+        ""
+      }`,
+      40,
+      y
+    );
+    y += 14;
+    doc.text(`PO Number: ${form.poNumber || ""}`, 40, y);
+    y += 14;
+
+    form.reqSections.forEach((s, idx) => {
+      y += 10;
+      doc.text(
+        `${idx + 1}. ${s.reqTitle || "-"} (REQ ID: ${s.reqId || "-"})`,
+        40,
+        y
+      );
+      y += 8;
+      const rows = (s.talents || [])
+        .filter((t) => t.selected)
+        .map((t) => [
+          t.name || "-",
+          t.role || t.email || "-",
+          t.assignedRate || "-",
+        ]);
+      if (rows.length === 0) {
+        doc.text("No talents selected", 60, y);
+        y += 14;
+      } else {
+        doc.autoTable({
+          startY: y,
+          head: [["Talent", "Role / Email", "Assigned Rate"]],
+          body: rows,
+          margin: { left: 40, right: 40 },
+          styles: { fontSize: 10 },
+        });
+        y = doc.lastAutoTable.finalY + 8;
+      }
+    });
+
+    doc.save(`purchase-order-${form.poNumber || "export"}.pdf`);
   }
 
   const selectedClient = clientsData.find(
@@ -154,116 +214,211 @@ function PurchaseOrderForm() {
   );
 
   return (
-    <div>
-      <h3 className="mb-3">Purchase Order Form</h3>
-
-      {isViewMode && (
-        <div className="alert alert-info">Form saved — Read-Only Mode</div>
-      )}
+    <div className="po-container">
+      <div className="d-flex align-items-center mb-3">
+        <h3 className="me-auto">Purchase Order | New</h3>
+      </div>
 
       <form key={formKey} onSubmit={handleSubmit}>
         <div className="row g-3">
-          {/* STANDARD INPUTS */}
-          {[
-            ["clientId", "Client", "select"],
-            ["poType", "PO Type", "select"],
-            ["poNumber", "PO Number"],
-            ["receivedOn", "Received On", "date"],
-            ["receivedFromName", "Received From - Name"],
-            ["receivedFromEmail", "Received From - Email"],
-            ["poStartDate", "PO Start Date", "date"],
-            ["poEndDate", "PO End Date", "date"],
-          ].map(([name, label, type]) => (
-            <div className="col-md-6" key={name}>
-              <label className="form-label">{label} *</label>
-
-              {type === "select" ? (
-                name === "clientId" ? (
-                  isViewMode ? (
-                    <input
-                      className="form-control"
-                      readOnly
-                      value={selectedClient?.name || ""}
-                    />
-                  ) : (
-                    <select
-                      className={
-                        "form-select " + (errors[name] ? "is-invalid" : "")
-                      }
-                      name={name}
-                      value={form[name]}
-                      onChange={handleChange}
-                    >
-                      <option value="">Select</option>
-                      {clientOptions.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  )
-                ) : isViewMode ? (
-                  <input
-                    className="form-control"
-                    readOnly
-                    value={form.poType}
-                  />
-                ) : (
-                  <select
-                    className={
-                      "form-select " + (errors[name] ? "is-invalid" : "")
-                    }
-                    name={name}
-                    value={form[name]}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select</option>
-                    <option value="Individual">Individual</option>
-                    <option value="Group">Group</option>
-                  </select>
-                )
-              ) : (
-                <input
-                  type={type || "text"}
-                  name={name}
-                  value={form[name]}
-                  readOnly={isViewMode}
-                  onChange={handleChange}
-                  className={
-                    "form-control " + (errors[name] ? "is-invalid" : "")
-                  }
-                />
-              )}
-
-              {errors[name] && (
-                <div className="invalid-feedback">{errors[name]}</div>
-              )}
-            </div>
-          ))}
-
-          {/* BUDGET */}
+          {/* Client */}
           <div className="col-md-4">
-            <label className="form-label">Budget *</label>
-            <input
-              type="number"
-              name="budget"
-              value={form.budget}
-              onChange={handleChange}
-              readOnly={isViewMode}
-              className={"form-control " + (errors.budget ? "is-invalid" : "")}
-            />
-            {errors.budget && (
-              <div className="invalid-feedback">{errors.budget}</div>
+            <label className="po-label">Client Name *</label>
+            {isViewMode ? (
+              <input
+                className="form-control po-input"
+                readOnly
+                value={selectedClient?.name || ""}
+              />
+            ) : (
+              <select
+                name="clientId"
+                className={
+                  "form-select po-select " +
+                  (errors.clientId ? "is-invalid" : "")
+                }
+                value={form.clientId}
+                onChange={handleChange}
+              >
+                <option value="">Select client</option>
+                {clientOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {errors.clientId && (
+              <div className="text-danger small mt-1">{errors.clientId}</div>
             )}
           </div>
 
-          {/* CURRENCY */}
+          {/* PO Type */}
           <div className="col-md-4">
-            <label className="form-label">Currency *</label>
+            <label className="po-label">Purchase Order Type *</label>
+            {isViewMode ? (
+              <input
+                className="form-control po-input"
+                readOnly
+                value={form.poType}
+              />
+            ) : (
+              <select
+                name="poType"
+                className={
+                  "form-select po-select " + (errors.poType ? "is-invalid" : "")
+                }
+                value={form.poType}
+                onChange={handleChange}
+              >
+                <option value="">Select</option>
+                <option value="Individual">Individual</option>
+                <option value="Group">Group</option>
+              </select>
+            )}
+            {errors.poType && (
+              <div className="text-danger small mt-1">{errors.poType}</div>
+            )}
+          </div>
+
+          {/* PO Number */}
+          <div className="col-md-4">
+            <label className="po-label">Purchase Order No. *</label>
+            <input
+              name="poNumber"
+              className={
+                "form-control po-input " + (errors.poNumber ? "is-invalid" : "")
+              }
+              value={form.poNumber}
+              onChange={handleChange}
+              readOnly={isViewMode}
+            />
+            {errors.poNumber && (
+              <div className="text-danger small mt-1">{errors.poNumber}</div>
+            )}
+          </div>
+
+          {/* Received On */}
+          <div className="col-md-3">
+            <label className="po-label">Received On *</label>
+            <input
+              name="receivedOn"
+              type="date"
+              className={
+                "form-control po-input " +
+                (errors.receivedOn ? "is-invalid" : "")
+              }
+              value={form.receivedOn}
+              onChange={handleChange}
+              readOnly={isViewMode}
+            />
+            {errors.receivedOn && (
+              <div className="text-danger small mt-1">{errors.receivedOn}</div>
+            )}
+          </div>
+
+          {/* Received From Name */}
+          <div className="col-md-3">
+            <label className="po-label">Received From - Name *</label>
+            <input
+              name="receivedFromName"
+              className={
+                "form-control po-input " +
+                (errors.receivedFromName ? "is-invalid" : "")
+              }
+              value={form.receivedFromName}
+              onChange={handleChange}
+              readOnly={isViewMode}
+            />
+            {errors.receivedFromName && (
+              <div className="text-danger small mt-1">
+                {errors.receivedFromName}
+              </div>
+            )}
+          </div>
+
+          {/* Received From Email */}
+          <div className="col-md-3">
+            <label className="po-label">Received From - Email *</label>
+            <input
+              name="receivedFromEmail"
+              type="email"
+              className={
+                "form-control po-input " +
+                (errors.receivedFromEmail ? "is-invalid" : "")
+              }
+              value={form.receivedFromEmail}
+              onChange={handleChange}
+              readOnly={isViewMode}
+            />
+            {errors.receivedFromEmail && (
+              <div className="text-danger small mt-1">
+                {errors.receivedFromEmail}
+              </div>
+            )}
+          </div>
+
+          {/* Start & End Dates */}
+          <div className="col-md-3">
+            <label className="po-label">PO Start Date *</label>
+            <input
+              name="poStartDate"
+              type="date"
+              className={
+                "form-control po-input " +
+                (errors.poStartDate ? "is-invalid" : "")
+              }
+              value={form.poStartDate}
+              onChange={handleChange}
+              readOnly={isViewMode}
+            />
+            {errors.poStartDate && (
+              <div className="text-danger small mt-1">{errors.poStartDate}</div>
+            )}
+          </div>
+
+          <div className="col-md-3">
+            <label className="po-label">PO End Date *</label>
+            <input
+              name="poEndDate"
+              type="date"
+              className={
+                "form-control po-input " +
+                (errors.poEndDate ? "is-invalid" : "")
+              }
+              value={form.poEndDate}
+              onChange={handleChange}
+              readOnly={isViewMode}
+            />
+            {errors.poEndDate && (
+              <div className="text-danger small mt-1">{errors.poEndDate}</div>
+            )}
+          </div>
+
+          {/* Budget & Currency */}
+          <div className="col-md-3">
+            <label className="po-label">Budget *</label>
+            <input
+              name="budget"
+              type="number"
+              className={
+                "form-control po-input " + (errors.budget ? "is-invalid" : "")
+              }
+              value={form.budget}
+              onChange={handleChange}
+              readOnly={isViewMode}
+            />
+            {errors.budget && (
+              <div className="text-danger small mt-1">{errors.budget}</div>
+            )}
+          </div>
+
+          <div className="col-md-3">
+            <label className="po-label">Currency *</label>
             <select
-              className="form-select"
-              disabled={isViewMode}
               name="currency"
+              disabled={isViewMode}
+              className="form-select po-select"
               value={form.currency}
               onChange={handleChange}
             >
@@ -274,9 +429,9 @@ function PurchaseOrderForm() {
           </div>
         </div>
 
-        <hr />
+        <hr className="my-4" />
 
-        <h5>REQ Sections</h5>
+        <h5 className="po-section-title">Talent Detail</h5>
 
         {form.reqSections.map((s, idx) => (
           <ReqSection
@@ -292,28 +447,24 @@ function PurchaseOrderForm() {
           />
         ))}
 
-        {/* ADD ANOTHER — ONLY FOR GROUP, NOT VIEW MODE */}
         {!isViewMode && form.poType === "Group" && (
-          <button
-            type="button"
-            className="btn btn-outline-primary mt-2"
-            onClick={addReqSection}
-          >
-            Add Another REQ
-          </button>
+          <div className="mb-3">
+            <button type="button" className="add-btn" onClick={addReqSection}>
+              + Add Another
+            </button>
+          </div>
         )}
 
-        <hr />
+        <hr className="my-3" />
 
         {!isViewMode ? (
           <div className="d-flex gap-2">
             <button type="submit" className="btn btn-primary">
               Save
             </button>
-
             <button
               type="button"
-              className="btn btn-warning"
+              className="btn btn-outline-secondary"
               onClick={() => {
                 setForm(initialForm);
                 setErrors({});
@@ -328,22 +479,14 @@ function PurchaseOrderForm() {
             <button
               type="button"
               className="btn btn-warning"
-              onClick={() => {
-                setIsViewMode(false);
-                setFormKey((k) => k + 1);
-              }}
+              onClick={handleEditAgain}
             >
               Edit Again
             </button>
-
             <button
               type="button"
               className="btn btn-success"
-              onClick={() => {
-                setForm(initialForm);
-                setIsViewMode(false);
-                setFormKey((k) => k + 1);
-              }}
+              onClick={handleNewForm}
             >
               New Form
             </button>
@@ -353,5 +496,3 @@ function PurchaseOrderForm() {
     </div>
   );
 }
-
-export default PurchaseOrderForm;
