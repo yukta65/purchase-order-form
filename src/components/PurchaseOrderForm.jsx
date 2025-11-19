@@ -21,6 +21,8 @@ function PurchaseOrderForm() {
   const [errors, setErrors] = useState({});
   const [isViewMode, setIsViewMode] = useState(false);
   const [prevClientId, setPrevClientId] = useState("");
+  // formKey forces a remount of the form subtree when changed
+  const [formKey, setFormKey] = useState(0);
 
   // Reset REQ sections when client changes
   useEffect(() => {
@@ -42,7 +44,10 @@ function PurchaseOrderForm() {
       }));
       setPrevClientId(form.clientId);
       setErrors({});
+      // bump formKey so children remount with fresh data
+      setFormKey((k) => k + 1);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.clientId]);
 
   const clientOptions = clientsData.map((c) => ({
@@ -67,7 +72,6 @@ function PurchaseOrderForm() {
   }
 
   function updateReqSection(id, updated) {
-    if (isViewMode) return;
     setForm((prev) => ({
       ...prev,
       reqSections: prev.reqSections.map((sec) =>
@@ -84,7 +88,7 @@ function PurchaseOrderForm() {
     }));
   }
 
-  // Validation
+  // Validation (same as before)
   function validate() {
     const e = {};
 
@@ -137,7 +141,9 @@ function PurchaseOrderForm() {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    setIsViewMode(true); // Read-only mode enabled
+    // enable view mode and remount children to ensure they pick up readOnly state
+    setIsViewMode(true);
+    setFormKey((k) => k + 1);
   }
 
   const selectedClient = clientsData.find(
@@ -154,7 +160,8 @@ function PurchaseOrderForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit}>
+      {/* key={formKey} forces remount when formKey changes */}
+      <form key={formKey} onSubmit={handleSubmit}>
         <div className="row g-3">
           {/* CLIENT */}
           <div className="col-md-6">
@@ -311,8 +318,10 @@ function PurchaseOrderForm() {
             type="button"
             className="btn btn-warning"
             onClick={() => {
+              // turn off view mode and bump the key to remount children
               setIsViewMode(false);
               setErrors({});
+              setFormKey((k) => k + 1);
             }}
           >
             Edit Again
