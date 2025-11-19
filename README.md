@@ -22,41 +22,29 @@ Below is a preview of the actual Purchase Order Form UI:
 🧩 Dynamic Form Logic
 
 Client selection loads associated REQ Jobs
-
 Selecting Job Title loads Talents
-
 Individual PO → only 1 talent allowed
-
 Group PO → minimum 2 talents required
 
 🛠 Talent Handling
 
 Inline validation on assigned rate
-
 Dynamic fields based on selection
-
 Clean table view in read-only mode
 
 📑 Form Modes
 
 Edit Mode: full form access
-
 View Mode: read-only formatted summary
-
 Edit Again: return to editing
-
 New Form: create completely new entry
 
 🎨 UI & Styling
 
 Bootstrap 5 integration
-
 Custom professional theme
-
 Responsive layout
-
 Styled REQ sections & talent rows
-
 Hover effects & structured spacing
 
 📦 Tech Stack
