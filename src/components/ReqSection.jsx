@@ -1,140 +1,160 @@
 import React, { useEffect, useState } from "react";
 import TalentRow from "./TalentRow";
 
-function ReqSection({ section, index, client, poType, onUpdate, onRemove }) {
-  // local state mirrors the section object
+function ReqSection({
+  section,
+  index,
+  client,
+  poType,
+  onUpdate,
+  onRemove,
+  isViewMode,
+  errors,
+}) {
   const [local, setLocal] = useState(section);
 
-  // keep local synced if parent provides a new section object
   useEffect(() => {
     setLocal(section);
   }, [section]);
 
-  // When important local fields change, notify parent.
-  // Use shallow dependencies to avoid infinite loops.
+  // Notify parent when important fields change
   useEffect(() => {
-    // send a minimal section payload (so parent can update)
     onUpdate({
       reqId: local.reqId,
       reqTitle: local.reqTitle,
       talents: local.talents,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [local.reqId, local.reqTitle, local.talents]);
 
   const reqOptions = client?.reqs || [];
 
   function handleReqChange(e) {
-    const { value } = e.target;
+    if (isViewMode) return;
+
+    const value = e.target.value;
     const found = reqOptions.find((r) => r.id === value);
 
     if (found) {
-      // Filter talents by req.stage if talent has stage property
-      const talentsForReq = (found.talents || []).map((t) => ({
-        // keep existing fields if present
+      const mappedTalents = found.talents.map((t) => ({
         id: t.id,
         name: t.name,
         email: t.email,
-        stage: t.stage, // optional
         selected: false,
-        assignedRate: t.assignedRate || "",
-        notes: t.notes || "",
+        assignedRate: "",
+        notes: "",
       }));
 
       setLocal((prev) => ({
         ...prev,
         reqId: found.id,
         reqTitle: found.title,
-        talents: talentsForReq,
+        talents: mappedTalents,
       }));
     } else {
-      setLocal((prev) => ({ ...prev, reqId: "", reqTitle: "", talents: [] }));
+      setLocal((prev) => ({
+        ...prev,
+        reqId: "",
+        reqTitle: "",
+        talents: [],
+      }));
     }
   }
 
-  // Toggle talent selection respecting Individual vs Group rules
-  function toggleTalent(talentId, selected) {
+  function toggleTalent(id, selected) {
+    if (isViewMode) return;
+
     setLocal((prev) => {
-      const updated = prev.talents.map((t) => {
-        if (t.id === talentId) {
-          return { ...t, selected };
-        }
-        // If Individual PO and another talent is selected, unselect others
-        if (poType === "Individual" && selected) {
-          return { ...t, selected: false };
-        }
-        return t;
-      });
+      let updated = [...prev.talents];
+
+      if (poType === "Individual") {
+        updated = updated.map((t) =>
+          t.id === id ? { ...t, selected } : { ...t, selected: false }
+        );
+      } else {
+        updated = updated.map((t) => (t.id === id ? { ...t, selected } : t));
+      }
 
       return { ...prev, talents: updated };
     });
   }
 
-  function updateTalent(talentId, updates) {
+  function updateTalent(id, updates) {
+    if (isViewMode) return;
+
     setLocal((prev) => ({
       ...prev,
       talents: prev.talents.map((t) =>
-        t.id === talentId ? { ...t, ...updates } : t
+        t.id === id ? { ...t, ...updates } : t
       ),
     }));
   }
 
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-start mb-2">
-        <h6 className="mb-0">
-          REQ #{index + 1} {local.reqTitle ? `- ${local.reqTitle}` : ""}
+    <div className="border p-3 mb-3 rounded bg-light">
+      <div className="d-flex justify-content-between">
+        <h6>
+          REQ #{index + 1} {local.reqTitle && ` - ${local.reqTitle}`}
         </h6>
-        <div>
-          <button className="btn btn-sm btn-outline-danger" onClick={onRemove}>
+
+        {!isViewMode && (
+          <button className="btn btn-sm btn-danger" onClick={onRemove}>
             Remove
           </button>
-        </div>
+        )}
       </div>
 
-      <div className="row g-2 align-items-center">
+      <div className="row g-2">
+        {/* REQ NAME */}
         <div className="col-md-6">
           <label className="form-label">Job Title / REQ Name *</label>
-          <select
-            className="form-select"
-            value={local.reqId || ""}
-            onChange={handleReqChange}
-          >
-            <option value="">Select job title</option>
-            {reqOptions.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.title}
-              </option>
-            ))}
-          </select>
+          {isViewMode ? (
+            <input className="form-control" value={local.reqTitle} readOnly />
+          ) : (
+            <select
+              className={"form-select " + (errors.req ? "is-invalid" : "")}
+              value={local.reqId}
+              onChange={handleReqChange}
+            >
+              <option value="">Select Job</option>
+              {reqOptions.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.title}
+                </option>
+              ))}
+            </select>
+          )}
+          {errors?.req && <div className="text-danger small">{errors.req}</div>}
         </div>
 
+        {/* REQ ID */}
         <div className="col-md-6">
           <label className="form-label">REQ ID</label>
-          <input className="form-control" value={local.reqId || ""} readOnly />
+          <input className="form-control" value={local.reqId} readOnly />
         </div>
       </div>
 
       <div className="mt-3">
         <h6>Talents</h6>
 
-        {(!local.talents || local.talents.length === 0) && (
-          <div className="text-muted small">
-            No talents available for this REQ.
-          </div>
+        {local.talents.length === 0 && (
+          <div className="text-muted small">No talents for this REQ.</div>
         )}
 
-        {local.talents?.map((t) => (
-          <div key={t.id} className="mb-2">
-            <TalentRow
-              talent={t}
-              selected={!!t.selected}
-              onToggle={(sel) => toggleTalent(t.id, sel)}
-              onChange={(upd) => updateTalent(t.id, upd)}
-              poType={poType}
-            />
-          </div>
+        {local.talents.map((t) => (
+          <TalentRow
+            key={t.id}
+            talent={t}
+            selected={t.selected}
+            isViewMode={isViewMode}
+            onToggle={(s) => toggleTalent(t.id, s)}
+            onChange={(u) => updateTalent(t.id, u)}
+            errors={errors || {}}
+          />
         ))}
+
+        {errors?.talents && (
+          <div className="text-danger small mt-2">{errors.talents}</div>
+        )}
       </div>
     </div>
   );
