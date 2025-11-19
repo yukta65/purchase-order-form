@@ -1,70 +1,122 @@
-# Getting Started with Create React App
+🧾 Purchase Order Form – React Project
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A fully dynamic, responsive, and validation-driven Purchase Order Management Form built using React.js, Bootstrap 5, and custom theme styling.
+This project fulfills all assessment requirements including:
 
-## Available Scripts
+✔ Dynamic REQ Sections
+✔ Job Title ↔ Talent Mapping
+✔ Individual vs Group PO Validation
+✔ Full Form Validation
+✔ Read-Only View Mode
+✔ Edit Again + New Form
+✔ PDF Download Support
+✔ Bootstrap UI + Custom Modern Theme
+✔ No Freezing (infinite loop fixed)
+✔ Professional responsive layout
 
-In the project directory, you can run:
+🎨 Project Preview
 
-### `npm start`
+Below is a preview of the actual Purchase Order Form UI:
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+🚀 Features
+🧩 Dynamic Form Logic
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Client selection loads associated REQ Jobs
 
-### `npm test`
+Selecting Job Title loads Talents
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Individual PO → only 1 talent allowed
 
-### `npm run build`
+Group PO → minimum 2 talents required
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+🛠 Talent Handling
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Inline validation on assigned rate
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Dynamic fields based on selection
 
-### `npm run eject`
+Clean table view in read-only mode
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+📑 Form Modes
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Edit Mode: full form access
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+View Mode: read-only formatted summary
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Edit Again: return to editing
 
-## Learn More
+New Form: create completely new entry
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+🎨 UI & Styling
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Bootstrap 5 integration
 
-### Code Splitting
+Custom professional theme
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+Responsive layout
 
-### Analyzing the Bundle Size
+Styled REQ sections & talent rows
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+Hover effects & structured spacing
 
-### Making a Progressive Web App
+📦 Tech Stack
+Technology--Purpose
+React.js-- Main UI framework
+Bootstrap 5-- Styling + Responsive layout
+Custom CSS (theme.css) --Modern themed UI
+JSON (Mock Data) Client → REQ → Talent mapping
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+📁 Project Structure
 
-### Advanced Configuration
+project-folder/
+│
+├── public/
+│ ├── form-preview.png  
+│ └── index.html
+│
+├── src/
+│ ├── components/
+│ │ ├── PurchaseOrderForm.jsx
+│ │ ├── ReqSection.jsx
+│ │ ├── TalentRow.jsx
+│ │
+│ ├── data/
+│ │ └── clients.json
+│ │
+│ ├── theme.css  
+│ ├── index.js
+│ └── App.js
+│
+├── package.json
+└── README.md
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+🛠 Installation & Setup
+1️⃣ Clone the repository
+git clone https://github.com/yukta65/purchase-order-form.git
+cd purchase-order-form
 
-### Deployment
+2️⃣ Install dependencies
+npm install
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+3️⃣ Start development server
+npm start
 
-### `npm run build` fails to minify
+Your app will run at:
+👉 http://localhost:3000
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+🎯 How It Works:
+
+✔ Choose Client
+Loads available job titles for that client.
+
+✔ Select Job Title
+Loads talents mapped to that REQ.
+
+✔ Select Talents
+Enables assigned rate + notes fields.
+
+✔ Save
+Switches UI to Read-Only Mode.
+
+✔ Edit Again / New Form
+Enables editing or starting new fresh form.
