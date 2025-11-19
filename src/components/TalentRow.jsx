@@ -1,56 +1,66 @@
 import React from "react";
 
-function TalentRow({ talent, selected, onToggle, onChange, poType }) {
+function TalentRow({
+  talent,
+  selected,
+  onToggle,
+  onChange,
+  isViewMode,
+  errors,
+}) {
   return (
-    <div className="d-flex align-items-start gap-3">
-      <div style={{ width: 28, marginTop: 6 }}>
+    <div className="border rounded p-2 mb-2 bg-white">
+      <div className="d-flex align-items-center gap-3">
+        {/* CHECKBOX */}
         <input
           type="checkbox"
-          checked={!!selected}
+          checked={selected}
+          disabled={isViewMode}
           onChange={(e) => onToggle(e.target.checked)}
+          style={{ transform: "scale(1.3)" }}
         />
-      </div>
 
-      <div style={{ flex: 1 }}>
-        <div>
+        <div style={{ flex: 1 }}>
           <strong>{talent.name}</strong>{" "}
-          <small className="text-muted">({talent.email || "—"})</small>
+          <small className="text-muted">({talent.email})</small>
+          {/* SHOW FIELDS ONLY IF SELECTED */}
+          {selected && (
+            <div className="row g-2 mt-2">
+              {/* RATE */}
+              <div className="col-md-4">
+                <label className="form-label small">Assigned Rate *</label>
+                <input
+                  className={
+                    "form-control form-control-sm " +
+                    (errors[`rate_${talent.id}`] ? "is-invalid" : "")
+                  }
+                  readOnly={isViewMode}
+                  value={talent.assignedRate}
+                  onChange={(e) => onChange({ assignedRate: e.target.value })}
+                  placeholder="Enter rate"
+                />
+                {errors[`rate_${talent.id}`] && (
+                  <div className="invalid-feedback">
+                    {errors[`rate_${talent.id}`]}
+                  </div>
+                )}
+              </div>
+
+              {/* NOTES */}
+              <div className="col-md-4">
+                <label className="form-label small">Notes</label>
+                <input
+                  className="form-control form-control-sm"
+                  readOnly={isViewMode}
+                  value={talent.notes}
+                  onChange={(e) => onChange({ notes: e.target.value })}
+                  placeholder="Optional notes"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Show the editable fields only when selected (as required) */}
-        {selected && (
-          <div className="row g-2 mt-2">
-            <div className="col-md-4">
-              <input
-                className="form-control form-control-sm"
-                placeholder="Assigned Rate (required)"
-                value={talent.assignedRate || ""}
-                onChange={(e) => onChange({ assignedRate: e.target.value })}
-                required
-              />
-            </div>
-            <div className="col-md-4">
-              <input
-                className="form-control form-control-sm"
-                placeholder="Notes (optional)"
-                value={talent.notes || ""}
-                onChange={(e) => onChange({ notes: e.target.value })}
-              />
-            </div>
-            <div className="col-md-4">
-              {/* show poType to help tester understand behaviour */}
-              <input
-                className="form-control form-control-sm"
-                value={poType || ""}
-                readOnly
-                title="PO Type"
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div style={{ width: 90, textAlign: "right", marginTop: 6 }}>
         <small className="text-muted">ID: {talent.id}</small>
       </div>
     </div>
