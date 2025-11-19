@@ -23,7 +23,7 @@ function ReqSection({
       reqTitle: local.reqTitle,
       talents: local.talents,
     });
-  }, [local.reqId, local.reqTitle, local.talents]);
+  }, [local.reqId, local.reqTitle, local.talents, onUpdate]);
 
   const reqOptions = client?.reqs || [];
 
