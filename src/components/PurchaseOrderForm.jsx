@@ -21,48 +21,52 @@ function PurchaseOrderForm() {
   const [errors, setErrors] = useState({});
   const [isViewMode, setIsViewMode] = useState(false);
   const [formKey, setFormKey] = useState(0);
-  const [prevClientId, setPrevClientId] = useState("");
 
-  // RESET req sections when client changes
+  // Load 1 default REQ section when client is selected
   useEffect(() => {
-    if (prevClientId !== form.clientId) {
-      setForm({
-        ...initialForm,
-        clientId: form.clientId,
-        currency: "INR",
-        reqSections: form.clientId
-          ? [
-              {
-                id: Date.now(),
-                reqId: "",
-                reqTitle: "",
-                talents: [],
-              },
-            ]
-          : [],
-      });
-      setPrevClientId(form.clientId);
-      setErrors({});
-      setFormKey((k) => k + 1);
+    if (form.clientId) {
+      setForm((prev) => ({
+        ...prev,
+        reqSections:
+          prev.reqSections.length === 0
+            ? [
+                {
+                  id: Date.now(),
+                  reqId: "",
+                  reqTitle: "",
+                  talents: [],
+                },
+              ]
+            : prev.reqSections,
+      }));
     }
   }, [form.clientId]);
 
-  const clientOptions = clientsData.map((c) => ({ id: c.id, name: c.name }));
+  const clientOptions = clientsData.map((c) => ({
+    id: c.id,
+    name: c.name,
+  }));
 
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+
+    // Clear errors for field
     setErrors((prev) => ({ ...prev, [name]: null }));
   }
 
   function addReqSection() {
-    const s = {
+    const newSection = {
       id: Date.now(),
       reqId: "",
       reqTitle: "",
       talents: [],
     };
-    setForm((prev) => ({ ...prev, reqSections: [...prev.reqSections, s] }));
+
+    setForm((prev) => ({
+      ...prev,
+      reqSections: [...prev.reqSections, newSection],
+    }));
   }
 
   function updateReqSection(id, updated) {
@@ -76,6 +80,7 @@ function PurchaseOrderForm() {
 
   function removeReqSection(id) {
     if (isViewMode) return;
+
     setForm((prev) => ({
       ...prev,
       reqSections: prev.reqSections.filter((s) => s.id !== id),
@@ -93,22 +98,26 @@ function PurchaseOrderForm() {
     if (!form.receivedFromEmail) e.receivedFromEmail = "Required";
     if (!form.poStartDate) e.poStartDate = "Required";
     if (!form.poEndDate) e.poEndDate = "Required";
-    if (form.poStartDate && form.poEndDate && form.poEndDate < form.poStartDate)
+
+    if (form.poEndDate < form.poStartDate)
       e.poEndDate = "End date cannot be before start date";
+
     if (!form.budget) e.budget = "Budget required";
 
+    // Validate REQ sections
     const reqErrs = [];
-
     form.reqSections.forEach((s) => {
       const se = {};
 
-      if (!s.reqId) se.req = "REQ Name required";
+      if (!s.reqId) se.reqId = "REQ Name required";
 
       const selected = s.talents.filter((t) => t.selected);
 
       if (form.poType === "Individual") {
         if (selected.length !== 1) se.talents = "Select exactly 1 talent";
-      } else {
+      }
+
+      if (form.poType === "Group") {
         if (selected.length < 2)
           se.talents = "Select at least 2 talents for Group PO";
       }
@@ -130,6 +139,7 @@ function PurchaseOrderForm() {
 
   function handleSubmit(e) {
     e.preventDefault();
+
     if (!validate()) {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -145,25 +155,22 @@ function PurchaseOrderForm() {
 
   return (
     <div>
-      <div className="container py-4">
-        <div className="po-card">
-          <h3 className="mb-3">Purchase Order Form</h3>
-        </div>
-      </div>
+      <h3 className="mb-3">Purchase Order Form</h3>
+
       {isViewMode && (
-        <div className="alert alert-info">Form saved — Read Only Mode</div>
+        <div className="alert alert-info">Form saved — Read-Only Mode</div>
       )}
 
       <form key={formKey} onSubmit={handleSubmit}>
         <div className="row g-3">
-          {/* --- Standard Inputs --- */}
+          {/* STANDARD INPUTS */}
           {[
             ["clientId", "Client", "select"],
             ["poType", "PO Type", "select"],
             ["poNumber", "PO Number"],
             ["receivedOn", "Received On", "date"],
             ["receivedFromName", "Received From - Name"],
-            ["receivedFromEmail", "Received From - Email", "email"],
+            ["receivedFromEmail", "Received From - Email"],
             ["poStartDate", "PO Start Date", "date"],
             ["poEndDate", "PO End Date", "date"],
           ].map(([name, label, type]) => (
@@ -187,7 +194,7 @@ function PurchaseOrderForm() {
                       value={form[name]}
                       onChange={handleChange}
                     >
-                      <option value="">Select client</option>
+                      <option value="">Select</option>
                       {clientOptions.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
@@ -220,8 +227,8 @@ function PurchaseOrderForm() {
                   type={type || "text"}
                   name={name}
                   value={form[name]}
-                  onChange={handleChange}
                   readOnly={isViewMode}
+                  onChange={handleChange}
                   className={
                     "form-control " + (errors[name] ? "is-invalid" : "")
                   }
@@ -234,7 +241,7 @@ function PurchaseOrderForm() {
             </div>
           ))}
 
-          {/* Budget */}
+          {/* BUDGET */}
           <div className="col-md-4">
             <label className="form-label">Budget *</label>
             <input
@@ -250,7 +257,7 @@ function PurchaseOrderForm() {
             )}
           </div>
 
-          {/* Currency */}
+          {/* CURRENCY */}
           <div className="col-md-4">
             <label className="form-label">Currency *</label>
             <select
@@ -285,26 +292,15 @@ function PurchaseOrderForm() {
           />
         ))}
 
-        {!isViewMode && (
-          <div className="mt-3">
-            <button
-              type="button"
-              className="btn btn-outline-primary me-2"
-              onClick={addReqSection}
-            >
-              Add REQ Section
-            </button>
-
-            {form.poType === "Group" && (
-              <button
-                type="button"
-                className="btn btn-outline-success"
-                onClick={addReqSection}
-              >
-                Add Another (Group)
-              </button>
-            )}
-          </div>
+        {/* ADD ANOTHER — ONLY FOR GROUP, NOT VIEW MODE */}
+        {!isViewMode && form.poType === "Group" && (
+          <button
+            type="button"
+            className="btn btn-outline-primary mt-2"
+            onClick={addReqSection}
+          >
+            Add Another REQ
+          </button>
         )}
 
         <hr />
@@ -314,6 +310,7 @@ function PurchaseOrderForm() {
             <button type="submit" className="btn btn-primary">
               Save
             </button>
+
             <button
               type="button"
               className="btn btn-warning"

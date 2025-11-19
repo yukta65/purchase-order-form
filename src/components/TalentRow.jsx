@@ -5,39 +5,54 @@ function TalentRow({ talent, selected, onToggle, onChange, poType, errors }) {
 
   return (
     <div className="border rounded p-2 mb-2 bg-white">
-      <div className="d-flex align-items-center gap-3">
-        {/* SELECT CHECKBOX */}
+      <div className="d-flex align-items-start gap-3">
         <input
           type="checkbox"
-          checked={selected}
+          checked={!!selected}
           onChange={(e) => onToggle(e.target.checked)}
+          style={{ transform: "scale(1.15)", marginTop: 6 }}
         />
 
-        {/* TALENT INFO */}
-        <div className="flex-grow-1">
-          <strong>{talent.name}</strong>
-          <div className="text-muted small">{talent.role}</div>
+        <div style={{ flex: 1 }}>
+          <div>
+            <strong>{talent.name}</strong>{" "}
+            <small className="text-muted">
+              ({talent.role || talent.email || "—"})
+            </small>
+          </div>
+
+          {selected && (
+            <div className="row g-2 mt-2">
+              <div className="col-md-4">
+                <label className="form-label small">Assigned Rate *</label>
+                <input
+                  className={
+                    "form-control form-control-sm " +
+                    (rateError ? "is-invalid" : "")
+                  }
+                  value={talent.assignedRate || ""}
+                  onChange={(e) => onChange({ assignedRate: e.target.value })}
+                  placeholder="Assigned Rate"
+                />
+                {rateError && (
+                  <div className="invalid-feedback small">{rateError}</div>
+                )}
+              </div>
+
+              <div className="col-md-4">
+                <label className="form-label small">Notes</label>
+                <input
+                  className="form-control form-control-sm"
+                  value={talent.notes || ""}
+                  onChange={(e) => onChange({ notes: e.target.value })}
+                  placeholder="Optional notes"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* ASSIGNED RATE FIELD */}
-        {selected && (
-          <div className="col-md-3">
-            <label className="form-label small">Assigned Rate *</label>
-            <input
-              type="number"
-              className={
-                "form-control " + (rateError ? "is-invalid border-danger" : "")
-              }
-              value={talent.assignedRate || ""}
-              onChange={(e) =>
-                onChange({
-                  assignedRate: e.target.value,
-                })
-              }
-            />
-            {rateError && <div className="text-danger small">{rateError}</div>}
-          </div>
-        )}
+        <small className="text-muted">ID: {talent.id}</small>
       </div>
     </div>
   );
