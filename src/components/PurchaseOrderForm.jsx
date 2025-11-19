@@ -21,16 +21,15 @@ function PurchaseOrderForm() {
   const [errors, setErrors] = useState({});
   const [isViewMode, setIsViewMode] = useState(false);
   const [prevClientId, setPrevClientId] = useState("");
-  // formKey forces a remount of the form subtree when changed
-  const [formKey, setFormKey] = useState(0);
+  const [formKey, setFormKey] = useState(0); // force remount when toggled
 
-  // Reset REQ sections when client changes
+  // When client changes: reset reqSections and bump key
   useEffect(() => {
     if (prevClientId !== form.clientId) {
       setForm((prev) => ({
         ...initialForm,
         clientId: form.clientId,
-        currency: "INR",
+        currency: prev.currency || "INR",
         reqSections: form.clientId
           ? [
               {
@@ -44,16 +43,12 @@ function PurchaseOrderForm() {
       }));
       setPrevClientId(form.clientId);
       setErrors({});
-      // bump formKey so children remount with fresh data
       setFormKey((k) => k + 1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.clientId]);
 
-  const clientOptions = clientsData.map((c) => ({
-    id: c.id,
-    name: c.name,
-  }));
+  const clientOptions = clientsData.map((c) => ({ id: c.id, name: c.name }));
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -62,12 +57,7 @@ function PurchaseOrderForm() {
   }
 
   function addReqSection() {
-    const s = {
-      id: Date.now(),
-      reqId: "",
-      reqTitle: "",
-      talents: [],
-    };
+    const s = { id: Date.now(), reqId: "", reqTitle: "", talents: [] };
     setForm((prev) => ({ ...prev, reqSections: [...prev.reqSections, s] }));
   }
 
@@ -88,7 +78,6 @@ function PurchaseOrderForm() {
     }));
   }
 
-  // Validation (same as before)
   function validate() {
     const e = {};
 
@@ -100,36 +89,39 @@ function PurchaseOrderForm() {
     if (!form.receivedFromEmail) e.receivedFromEmail = "Valid email required";
     if (!form.poStartDate) e.poStartDate = "Required";
     if (!form.poEndDate) e.poEndDate = "Required";
-
     if (form.poStartDate && form.poEndDate && form.poEndDate < form.poStartDate)
       e.poEndDate = "End date cannot be before start date";
-
     if (!form.budget) e.budget = "Budget required";
+    if (form.budget && !/^[0-9]{1,5}$/.test(String(form.budget)))
+      e.budget = "Budget must be numeric and up to 5 digits";
 
+    // REQ validation
     const reqErrs = [];
+    if (!form.reqSections || form.reqSections.length === 0) {
+      e.reqSections = "At least one REQ section required";
+    } else {
+      form.reqSections.forEach((s) => {
+        const se = {};
+        if (!s.reqId) se.req = "REQ Name required";
 
-    form.reqSections.forEach((s) => {
-      const se = {};
+        const selected = (s.talents || []).filter((t) => t.selected);
 
-      if (!s.reqId) se.req = "REQ Name required";
+        if (form.poType === "Individual") {
+          if (selected.length !== 1) se.talents = "Select exactly 1 talent";
+        } else if (form.poType === "Group") {
+          if (selected.length < 2) se.talents = "Select 2 or more talents";
+        }
 
-      const selected = s.talents.filter((t) => t.selected);
+        selected.forEach((t) => {
+          if (!t.assignedRate || !String(t.assignedRate).trim()) {
+            se[`rate_${t.id}`] = "Assigned Rate required";
+          }
+        });
 
-      if (form.poType === "Individual") {
-        if (selected.length !== 1) se.talents = "Select exactly 1 talent";
-      } else if (form.poType === "Group") {
-        if (selected.length < 2) se.talents = "Select 2 or more talents";
-      }
-
-      selected.forEach((t) => {
-        if (!t.assignedRate || !String(t.assignedRate).trim())
-          se[`rate_${t.id}`] = "Rate required";
+        reqErrs.push(Object.keys(se).length ? se : null);
       });
-
-      reqErrs.push(Object.keys(se).length ? se : null);
-    });
-
-    if (reqErrs.some((x) => x)) e.reqSections = reqErrs;
+      if (reqErrs.some(Boolean)) e.reqSections = reqErrs;
+    }
 
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -141,9 +133,9 @@ function PurchaseOrderForm() {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    // enable view mode and remount children to ensure they pick up readOnly state
     setIsViewMode(true);
-    setFormKey((k) => k + 1);
+    setFormKey((k) => k + 1); // ensure children remount and show read-only
+    console.log("Saved form data:", form);
   }
 
   const selectedClient = clientsData.find(
@@ -155,15 +147,12 @@ function PurchaseOrderForm() {
       <h3 className="mb-3">Purchase Order Form</h3>
 
       {isViewMode && (
-        <div className="alert alert-info">
-          The form has been saved and is now in read-only mode.
-        </div>
+        <div className="alert alert-info">Form saved — read-only mode</div>
       )}
 
-      {/* key={formKey} forces remount when formKey changes */}
       <form key={formKey} onSubmit={handleSubmit}>
         <div className="row g-3">
-          {/* CLIENT */}
+          {/* Client */}
           <div className="col-md-6">
             <label className="form-label">Client *</label>
             {isViewMode ? (
@@ -181,7 +170,7 @@ function PurchaseOrderForm() {
                 value={form.clientId}
                 onChange={handleChange}
               >
-                <option value="">Select</option>
+                <option value="">Select client</option>
                 {clientOptions.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -189,9 +178,12 @@ function PurchaseOrderForm() {
                 ))}
               </select>
             )}
+            {errors.clientId && (
+              <div className="invalid-feedback">{errors.clientId}</div>
+            )}
           </div>
 
-          {/* PO TYPE */}
+          {/* PO Type */}
           <div className="col-md-6">
             <label className="form-label">PO Type *</label>
             {isViewMode ? (
@@ -208,16 +200,19 @@ function PurchaseOrderForm() {
                 <option value="Group">Group</option>
               </select>
             )}
+            {errors.poType && (
+              <div className="invalid-feedback">{errors.poType}</div>
+            )}
           </div>
 
-          {/* OTHER FIELDS */}
+          {/* Other fields */}
           {[
             ["poNumber", "PO Number"],
             ["receivedOn", "Received On", "date"],
-            ["receivedFromName", "Sender Name"],
-            ["receivedFromEmail", "Sender Email", "email"],
-            ["poStartDate", "Start Date", "date"],
-            ["poEndDate", "End Date", "date"],
+            ["receivedFromName", "Received From - Name"],
+            ["receivedFromEmail", "Received From - Email", "email"],
+            ["poStartDate", "PO Start Date", "date"],
+            ["poEndDate", "PO End Date", "date"],
           ].map(([name, label, type]) => (
             <div className="col-md-6" key={name}>
               <label className="form-label">{label} *</label>
@@ -235,28 +230,31 @@ function PurchaseOrderForm() {
             </div>
           ))}
 
-          {/* BUDGET */}
+          {/* Budget */}
           <div className="col-md-4">
             <label className="form-label">Budget *</label>
             <input
               className={"form-control " + (errors.budget ? "is-invalid" : "")}
-              value={form.budget}
               name="budget"
               type="number"
-              readOnly={isViewMode}
+              value={form.budget}
               onChange={handleChange}
+              readOnly={isViewMode}
             />
+            {errors.budget && (
+              <div className="invalid-feedback">{errors.budget}</div>
+            )}
           </div>
 
-          {/* CURRENCY */}
+          {/* Currency */}
           <div className="col-md-4">
             <label className="form-label">Currency *</label>
             <select
-              disabled={isViewMode}
               className={"form-select " + (errors.currency ? "is-invalid" : "")}
               name="currency"
               value={form.currency}
               onChange={handleChange}
+              disabled={isViewMode}
             >
               <option value="INR">INR</option>
               <option value="USD">USD</option>
@@ -267,8 +265,7 @@ function PurchaseOrderForm() {
 
         <hr />
 
-        {/* REQ SECTIONS */}
-        <h5>REQ Sections</h5>
+        <h5>Talent Details (REQ Sections)</h5>
 
         {form.reqSections.map((s, idx) => (
           <ReqSection
@@ -285,47 +282,60 @@ function PurchaseOrderForm() {
         ))}
 
         {!isViewMode && (
-          <>
+          <div className="mb-3">
             <button
               type="button"
-              className="btn btn-outline-primary mt-2"
+              className="btn btn-outline-primary me-2"
               onClick={addReqSection}
             >
               Add REQ Section
             </button>
-
             {form.poType === "Group" && (
               <button
                 type="button"
-                className="btn btn-outline-success mt-2 ms-2"
+                className="btn btn-outline-success"
                 onClick={addReqSection}
               >
                 Add Another (Group)
               </button>
             )}
-          </>
+          </div>
         )}
 
         <hr />
 
-        {/* BUTTONS */}
         {!isViewMode ? (
-          <button type="submit" className="btn btn-primary">
-            Save
-          </button>
+          <div className="d-flex gap-2">
+            <button type="submit" className="btn btn-primary">
+              Save
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                setForm(initialForm);
+                setErrors({});
+                setPrevClientId("");
+                setFormKey((k) => k + 1);
+              }}
+            >
+              Reset
+            </button>
+          </div>
         ) : (
-          <button
-            type="button"
-            className="btn btn-warning"
-            onClick={() => {
-              // turn off view mode and bump the key to remount children
-              setIsViewMode(false);
-              setErrors({});
-              setFormKey((k) => k + 1);
-            }}
-          >
-            Edit Again
-          </button>
+          <div>
+            <button
+              type="button"
+              className="btn btn-warning"
+              onClick={() => {
+                setIsViewMode(false);
+                setErrors({});
+                setFormKey((k) => k + 1); // remount children to pick up edit mode
+              }}
+            >
+              Edit Again
+            </button>
+          </div>
         )}
       </form>
     </div>
