@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import clientsData from "../data/clients.json";
 import ReqSection from "./ReqSection";
-import { jsPDF } from "jspdf";
-import "jspdf-autotable";
 import "../styles/po-form.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 
