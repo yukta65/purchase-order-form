@@ -31,7 +31,6 @@ export default function PurchaseOrderForm() {
   const [isViewMode, setIsViewMode] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
-  // Once client chosen, ensure there's at least one REQ section
   useEffect(() => {
     if (form.clientId && (!form.reqSections || form.reqSections.length === 0)) {
       setForm((prev) => ({
@@ -46,7 +45,6 @@ export default function PurchaseOrderForm() {
         ],
       }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.clientId]);
 
   const clientOptions = clientsData.map((c) => ({ id: c.id, name: c.name }));
@@ -102,7 +100,6 @@ export default function PurchaseOrderForm() {
     else if (!/^\d{1,5}$/.test(String(form.budget)))
       e.budget = "Budget must be up to 5 digits";
 
-    // validate REQ sections
     if (!form.reqSections || form.reqSections.length === 0) {
       e.reqSections = "At least one REQ section required";
     } else {
@@ -166,7 +163,6 @@ export default function PurchaseOrderForm() {
 
       <form key={formKey} onSubmit={handleSubmit}>
         <div className="row g-3">
-          {/* Client */}
           <div className="col-md-4">
             <label className="po-label">Client Name *</label>
             {isViewMode ? (
@@ -197,8 +193,6 @@ export default function PurchaseOrderForm() {
               <div className="text-danger small mt-1">{errors.clientId}</div>
             )}
           </div>
-
-          {/* PO Type */}
           <div className="col-md-4">
             <label className="po-label">Purchase Order Type *</label>
             {isViewMode ? (
@@ -226,7 +220,6 @@ export default function PurchaseOrderForm() {
             )}
           </div>
 
-          {/* PO Number */}
           <div className="col-md-4">
             <label className="po-label">Purchase Order No. *</label>
             <input
@@ -242,8 +235,6 @@ export default function PurchaseOrderForm() {
               <div className="text-danger small mt-1">{errors.poNumber}</div>
             )}
           </div>
-
-          {/* Received On */}
           <div className="col-md-3">
             <label className="po-label">Received On *</label>
             <input
@@ -262,7 +253,6 @@ export default function PurchaseOrderForm() {
             )}
           </div>
 
-          {/* Received From Name */}
           <div className="col-md-3">
             <label className="po-label">Received From - Name *</label>
             <input
@@ -281,8 +271,6 @@ export default function PurchaseOrderForm() {
               </div>
             )}
           </div>
-
-          {/* Received From Email */}
           <div className="col-md-3">
             <label className="po-label">Received From - Email *</label>
             <input
@@ -302,8 +290,6 @@ export default function PurchaseOrderForm() {
               </div>
             )}
           </div>
-
-          {/* Start & End Dates */}
           <div className="col-md-3">
             <label className="po-label">PO Start Date *</label>
             <input
@@ -339,8 +325,6 @@ export default function PurchaseOrderForm() {
               <div className="text-danger small mt-1">{errors.poEndDate}</div>
             )}
           </div>
-
-          {/* Budget & Currency */}
           <div className="col-md-3">
             <label className="po-label">Budget *</label>
             <input
